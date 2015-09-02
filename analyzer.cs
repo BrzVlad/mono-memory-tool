@@ -83,7 +83,7 @@ public class Program {
 			RunMono (mono, args.SubArray<string> (1), true);
 			ParseBinProtOutput (true);
 			AddPlotData ();
-			statsWriter.WriteLine ("Conc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, concurrentIntervals.Count, num_minor_while_major);
+			statsWriter.WriteLine ("Conc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
 
 			Plot (svgFile);
 		}
@@ -210,8 +210,7 @@ public class Program {
 		ParseNurseryCollections (stdout);
 		if (concurrent)
 			ParseConcurrentCollections (stdout);
-		else
-			ParseMajorCollections (stdout);
+		ParseMajorCollections (stdout);
 		ParseStopIntervals (stdout);
 	}
 
