@@ -54,16 +54,17 @@ public class Program {
 	private static PlotModel plotModel;
 
 	public static void Main (string[] args) {
-		if (args.Length < 1) {
-			Console.WriteLine ("Usage : ./analyzer.exe mono [mono-arg1] [mono-arg2] ...");
+		if (args.Length < 2) {
+			Console.WriteLine ("Usage : ./analyzer.exe mono working-directory [mono-arg1] [mono-arg2] ...");
 			return;
 		}
 
-		string target = Path.GetFileNameWithoutExtension (args[1]);
+		string mono = args [0];
+		string workingDirectory = args [1];
+		string target = Path.GetFileNameWithoutExtension (args[2]);
 		string resultsFolder = Path.Combine ("results", target);
 		string statsFile = Path.Combine (resultsFolder, "stats");
 		string svgFile = Path.Combine (resultsFolder, target + ".svg");
-		string mono = args [0];
 
 		Directory.CreateDirectory (resultsFolder);
 		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
@@ -74,13 +75,13 @@ public class Program {
 			/* Reduce jit compilation delays */
 			Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 
-			RunMono (mono, args.SubArray<string> (1), false);
+			RunMono (mono, args.SubArray<string> (2), workingDirectory, false);
 			ParseBinProtOutput (false);
 			AddPlotData ();
 			statsWriter.WriteLine ("Noconc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
 			Thread.Sleep (1000);
 
-			RunMono (mono, args.SubArray<string> (1), true);
+			RunMono (mono, args.SubArray<string> (2), workingDirectory, true);
 			ParseBinProtOutput (true);
 			AddPlotData ();
 			statsWriter.WriteLine ("Conc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
@@ -91,10 +92,11 @@ public class Program {
 
 
 
-	public static void RunMono (string mono, string[] args, bool concurrent) {
+	public static void RunMono (string mono, string[] args, string workingDirectory, bool concurrent) {
 		Process p = new Process ();
 		p.StartInfo.UseShellExecute = false;
 		p.StartInfo.FileName = mono;
+		p.StartInfo.WorkingDirectory = workingDirectory;
 		p.StartInfo.Arguments = string.Join (" ", args);
 
 		if (concurrent)
