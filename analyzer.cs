@@ -82,7 +82,6 @@ public class Program {
 			ParseBinProtOutput (false);
 			AddPlotData ();
 			OutputStats ("noconc", statsWriter);
-			Thread.Sleep (1000);
 
 			RunMono (mono, args.SubArray<string> (2), workingDirectory, true);
 			ParseBinProtOutput (true);
@@ -160,6 +159,7 @@ public class Program {
 			p.StartInfo.EnvironmentVariables.Add ("MONO_GC_PARAMS", "major=marksweep-conc");
 		p.StartInfo.EnvironmentVariables.Add ("MONO_GC_DEBUG", "binary-protocol=" + binprotFile);
 
+		Thread.Sleep (1000);
 		p.Start ();
 
 		DateTime startTime = DateTime.Now.AddMilliseconds (concurrent ? deltaHackConc : deltaHackNoconc);
