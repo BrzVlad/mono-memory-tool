@@ -28,6 +28,7 @@ public struct Point {
 public struct Interval {
 	public float start, end;
 	public bool done;
+	public int generation;
 }
 
 public static class ArrayExtensions {
@@ -52,6 +53,7 @@ public class Program {
 	private static List<Point> memoryUsage;
 	private static List<Interval> nurseryIntervals, majorIntervals, concurrentIntervals, stopIntervals;
 	private static PlotModel plotModel;
+	private static float referenceTime;
 
 	public static void Main (string[] args) {
 		if (args.Length < 2) {
@@ -76,21 +78,76 @@ public class Program {
 			Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 
 			RunMono (mono, args.SubArray<string> (2), workingDirectory, false);
+			referenceTime = memoryUsage [memoryUsage.Count - 1].x;
 			ParseBinProtOutput (false);
 			AddPlotData ();
-			statsWriter.WriteLine ("Noconc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
+			OutputStats ("noconc", statsWriter);
 			Thread.Sleep (1000);
 
 			RunMono (mono, args.SubArray<string> (2), workingDirectory, true);
 			ParseBinProtOutput (true);
 			AddPlotData ();
-			statsWriter.WriteLine ("Conc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
+			OutputStats ("conc", statsWriter);
 
 			Plot (svgFile);
 		}
 	}
 
+	public static void OutputStats (string prefix, StreamWriter statsWriter) {
+		float totalTime = memoryUsage [memoryUsage.Count - 1].x;
+		statsWriter.WriteLine ("\n" + prefix);
+		/* Number of collections */
+		statsWriter.WriteLine ("Time (s)		{0}", totalTime);
+		statsWriter.WriteLine ("Minor			{0}", nurseryIntervals.Count);
+		statsWriter.WriteLine ("Major			{0}", majorIntervals.Count);
+		statsWriter.WriteLine ("Minor While Major	{0}", num_minor_while_major);
+		/* Pause times */
+		float minMinor = float.MaxValue, maxMinor = float.MinValue, minMajor = float.MaxValue, maxMajor = float.MinValue, avgMinor = 0.0f, avgMajor = 0.0f, totalPause = 0.0f;
+		int numMinor = 0, numMajor = 0;
 
+		foreach (Interval interval in stopIntervals) {
+			float intervalDuration = interval.end - interval.start;
+			totalPause += intervalDuration;
+			if (interval.generation == 0) {
+				numMinor++;
+				if (intervalDuration < minMinor)
+					minMinor = intervalDuration;
+				if (intervalDuration > maxMinor)
+					maxMinor = intervalDuration;
+				avgMinor += intervalDuration;
+			} else if (interval.generation == 1) {
+				numMajor++;
+				if (intervalDuration < minMajor)
+					minMajor = intervalDuration;
+				if (intervalDuration > maxMajor)
+					maxMajor = intervalDuration;
+				avgMajor += intervalDuration;
+			} else {
+				throw new Exception ("Invalid genration");
+			}
+		}
+		avgMinor /= numMinor;
+		avgMajor /= numMajor;
+
+		statsWriter.WriteLine ();
+		statsWriter.WriteLine ("Total pause time (ms)	{0}", totalPause * 1000);
+		statsWriter.WriteLine ("Minor stops		{0}", numMinor);
+		statsWriter.WriteLine ("Min minor (ms)		{0}", minMinor * 1000);
+		statsWriter.WriteLine ("Max minor (ms)		{0}", maxMinor * 1000);
+		statsWriter.WriteLine ("Avg minor (ms)		{0}", avgMinor * 1000);
+		statsWriter.WriteLine ("Major stops		{0}", numMajor);
+		statsWriter.WriteLine ("Min major (ms)		{0}", minMajor * 1000);
+		statsWriter.WriteLine ("Max major (ms)		{0}", maxMajor * 1000);
+		statsWriter.WriteLine ("Avg major (ms)		{0}", avgMajor * 1000);
+
+		/* Memory Usage */
+		float memoryUsageStat = 0.0f;
+		for (int i = 1; i < memoryUsage.Count - 1; i++)
+			memoryUsageStat += (memoryUsage [i].x - memoryUsage [i - 1].x) * (memoryUsage [i].y + memoryUsage [i - 1].y) / 2;
+		memoryUsageStat *= referenceTime / totalTime;
+		statsWriter.WriteLine ();
+		statsWriter.WriteLine ("Memory Usage (MBs)	{0}", memoryUsageStat);
+	}
 
 	public static void RunMono (string mono, string[] args, string workingDirectory, bool concurrent) {
 		Process p = new Process ();
@@ -183,14 +240,15 @@ public class Program {
 		string line;
 
 		Regex startRegex = new Regex (@"world_stopped generation \d+ timestamp (\d+)");
-		Regex endRegex = new Regex (@"world_restarted generation \d+ timestamp (\d+)");
+		Regex endRegex = new Regex (@"world_restarted generation (\d+) timestamp (\d+)");
 		Interval interval = new Interval ();
 
 		while ((line = reader.ReadLine ()) != null) {
 			if (startRegex.IsMatch (line)) {
 				interval.start = ((float)int.Parse (startRegex.Match (line).Groups [1].Value)) / 10000000;
 			} else if (endRegex.IsMatch (line)) {
-				interval.end = ((float)int.Parse (endRegex.Match (line).Groups [1].Value)) / 10000000;
+				interval.generation = int.Parse (endRegex.Match (line).Groups [1].Value);
+				interval.end = ((float)int.Parse (endRegex.Match (line).Groups [2].Value)) / 10000000;
 				stopIntervals.Add (interval);
 			}
 		}
