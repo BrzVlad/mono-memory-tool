@@ -59,25 +59,34 @@ public class Program {
 			return;
 		}
 
-		plotModel  = new PlotModel { Title = Path.GetFileNameWithoutExtension (args [1]) };
-		plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Bottom });
-		plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Left });
+		string target = Path.GetFileNameWithoutExtension (args[1]);
+		string resultsFolder = Path.Combine ("results", target);
+		string statsFile = Path.Combine (resultsFolder, "stats");
+		string svgFile = Path.Combine (resultsFolder, target + ".svg");
+		string mono = args [0];
 
-		/* Reduce jit compilation delays */
-		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
+		Directory.CreateDirectory (resultsFolder);
+		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
+			plotModel  = new PlotModel { Title = Path.GetFileNameWithoutExtension (args [1]) };
+			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Bottom });
+			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Left });
 
-		RunMono (args [0], args.SubArray<string> (1), false);
-		ParseBinProtOutput (false);
-		AddPlotData ();
-		Console.WriteLine ("Noconc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
-		Thread.Sleep (1000);
+			/* Reduce jit compilation delays */
+			Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 
-		RunMono (args [0], args.SubArray<string> (1), true);
-		ParseBinProtOutput (true);
-		AddPlotData ();
-		Console.WriteLine ("Conc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, concurrentIntervals.Count, num_minor_while_major);
+			RunMono (mono, args.SubArray<string> (1), false);
+			ParseBinProtOutput (false);
+			AddPlotData ();
+			statsWriter.WriteLine ("Noconc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, majorIntervals.Count, num_minor_while_major);
+			Thread.Sleep (1000);
 
-		Plot (Path.GetFileNameWithoutExtension (args [1]) + ".svg");
+			RunMono (mono, args.SubArray<string> (1), true);
+			ParseBinProtOutput (true);
+			AddPlotData ();
+			statsWriter.WriteLine ("Conc Minor {0}, Major {1}, Minor While Major {2}", nurseryIntervals.Count, concurrentIntervals.Count, num_minor_while_major);
+
+			Plot (svgFile);
+		}
 	}
 
 
