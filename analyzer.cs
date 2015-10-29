@@ -106,6 +106,15 @@ public class Program {
 		RunStats aggregated = new RunStats ();
 		list.Sort ();
 
+		int numRuns = Program.numRuns;
+
+		if (numRuns < 3) {
+			/* We consider all the runs, add dummy outliers */
+			list.Insert (0, null);
+			list.Add (null);
+			numRuns += 2;
+		}
+
 		for (int i = 1; i < numRuns - 1; i++) {
 			RunStats current = list [i];
 
