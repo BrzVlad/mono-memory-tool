@@ -102,15 +102,18 @@ public class Program {
 			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Bottom });
 			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Left });
 
+			plotModel.LegendBackground = OxyColors.LightGray;
+			plotModel.LegendBorder = OxyColors.Black;
+
 			RunMono (mono, monoArguments, workingDirectory, false);
 			referenceTime = memoryUsage [memoryUsage.Count - 1].x;
 			ParseBinProtOutput ();
-			AddPlotData ();
+			AddPlotData ("noconc");
 			noconcRunStats.Add (GetStats ());
 
 			RunMono (mono, monoArguments, workingDirectory, true);
 			ParseBinProtOutput ();
-			AddPlotData ();
+			AddPlotData ("conc");
 			concRunStats.Add (GetStats ());
 
 			Plot (svgFile);
@@ -404,9 +407,13 @@ public class Program {
 		}
 	}
 
-	public static void AddPlotData () {
+
+	static byte lineColor;
+	public static void AddPlotData (string name) {
 		LineSeries lineSeries = new LineSeries ();
-		lineSeries.Color = OxyColor.FromRgb (0, 0, 0);
+		lineSeries.Title = name;
+		lineSeries.Color = OxyColor.FromRgb (lineColor, lineColor, lineColor);
+		lineColor += 128;
 		for (int i = 0; i < memoryUsage.Count; i++)
 			lineSeries.Points.Add (new DataPoint (memoryUsage [i].x, memoryUsage [i].y));
 		plotModel.Series.Add (lineSeries);
@@ -414,7 +421,7 @@ public class Program {
 		AddSeries (plotModel.Series, majorIntervals, OxyColor.FromRgb (255, 0, 0));
 		AddSeries (plotModel.Series, concurrentIntervals, OxyColor.FromRgb (0, 0, 255));
 		AddSeries (plotModel.Series, nurseryIntervals, OxyColor.FromRgb (0, 255, 0));
-		AddSeries (plotModel.Series, plotStopIntervals, OxyColor.FromRgb (192, 192, 192));
+		AddSeries (plotModel.Series, plotStopIntervals, OxyColor.FromRgb (255, 255, 0));
 	}
 
 	public static void Plot (string name) {
