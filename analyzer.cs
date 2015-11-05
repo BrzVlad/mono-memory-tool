@@ -5,6 +5,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Collections.ObjectModel;
+using System.Linq;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
@@ -51,42 +52,63 @@ public class Program {
 	public const int deltaHackNoconc = deltaHackConc;
 
 	private static int num_minor_while_major;
+	private static int num_stop_intervals;
 
 	private static List<Point> memoryUsage;
-	private static List<Interval> nurseryIntervals, majorIntervals, concurrentIntervals, stopIntervals;
+	private static List<Interval> nurseryIntervals, majorIntervals, concurrentIntervals, stopIntervals, plotStopIntervals;
 	private static PlotModel plotModel;
 	private static float referenceTime;
 
 	private static List<RunStats> noconcRunStats = new List<RunStats> ();
 	private static List<RunStats> concRunStats = new List<RunStats> ();
 
-	public static void Main (string[] args) {
+	public static void ParseArguments (string[] args, out string mono, out string workingDirectory, out string[] monoArguments) {
+		int arg = 0;
+
 		if (args.Length < 2) {
-			Console.WriteLine ("Usage : ./analyzer.exe mono working-directory [mono-arg1] [mono-arg2] ...");
-			return;
+			throw new ArgumentException ("Usage : ./analyzer.exe [--stop stop_intervals] mono working-directory [mono-arg1] [mono-arg2] ...");
 		}
 
-		string mono = args [0];
-		string workingDirectory = args [1];
-		string target = Path.GetFileNameWithoutExtension (args[2]);
-		string resultsFolder = Path.Combine ("results", target);
+		while (args [arg].StartsWith ("--")) {
+			if (args [arg].Equals ("--stop")) {
+				arg++;
+				num_stop_intervals = Int32.Parse (args [arg]);
+				arg++;
+			} else {
+				throw new ArgumentException ("Invalid argument");
+			}
+		}
+
+		mono = args [arg++];
+		workingDirectory = args [arg++];
+		monoArguments = args.SubArray<string> (arg);
+	}
+
+	public static void Main (string[] args) {
+		string mono, workingDirectory, target, resultsFolder;
+		string[] monoArguments;
+
+		ParseArguments (args, out mono, out workingDirectory, out monoArguments);
+
+		target = Path.GetFileNameWithoutExtension (monoArguments [0]);
+		resultsFolder = Path.Combine ("results", target);
 
 		Directory.CreateDirectory (resultsFolder);
 		/* Reduce jit compilation delays */
 		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 		for (int i = 0; i < numRuns; i++) {
 			string svgFile = Path.Combine (resultsFolder, target + i + ".svg");
-			plotModel  = new PlotModel { Title = Path.GetFileNameWithoutExtension (args [1]) };
+			plotModel  = new PlotModel { Title = Path.GetFileNameWithoutExtension (workingDirectory) };
 			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Bottom });
 			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Left });
 
-			RunMono (mono, args.SubArray<string> (2), workingDirectory, false);
+			RunMono (mono, monoArguments, workingDirectory, false);
 			referenceTime = memoryUsage [memoryUsage.Count - 1].x;
 			ParseBinProtOutput ();
 			AddPlotData ();
 			noconcRunStats.Add (GetStats ());
 
-			RunMono (mono, args.SubArray<string> (2), workingDirectory, true);
+			RunMono (mono, monoArguments, workingDirectory, true);
 			ParseBinProtOutput ();
 			AddPlotData ();
 			concRunStats.Add (GetStats ());
@@ -330,6 +352,13 @@ public class Program {
 				stopIntervals.Add (interval);
 			}
 		}
+
+		plotStopIntervals = stopIntervals.OrderByDescending (ival => ival.end - ival.start).Take (num_stop_intervals).OrderBy (ival => ival.start).ToList<Interval> ();
+
+		Console.Write ("{0} intervals", plotStopIntervals.Count ());
+		for (int i = 0; i < plotStopIntervals.Count (); i++)
+			Console.Write (", {0}({1})", plotStopIntervals [i].start, plotStopIntervals [i].end - plotStopIntervals [i].start);
+		Console.WriteLine ();
 	}
 
 	public static void ParseBinProtOutput () {
@@ -385,7 +414,7 @@ public class Program {
 		AddSeries (plotModel.Series, majorIntervals, OxyColor.FromRgb (255, 0, 0));
 		AddSeries (plotModel.Series, concurrentIntervals, OxyColor.FromRgb (0, 0, 255));
 		AddSeries (plotModel.Series, nurseryIntervals, OxyColor.FromRgb (0, 255, 0));
-//		AddSeries (plotModel.Series, stopIntervals, OxyColor.FromRgb (192, 192, 192));
+		AddSeries (plotModel.Series, plotStopIntervals, OxyColor.FromRgb (192, 192, 192));
 	}
 
 	public static void Plot (string name) {
