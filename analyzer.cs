@@ -59,15 +59,26 @@ public class Program {
 	private static PlotModel plotModel;
 	private static float referenceTime;
 
+	/* If running conc vs conc, noconc is actually conc */
 	private static List<RunStats> noconcRunStats = new List<RunStats> ();
 	private static List<RunStats> concRunStats = new List<RunStats> ();
 
+#if CONC_VS_CONC
+	public static void ParseArguments (string[] args, out string mono, out string mono2, out string workingDirectory, out string[] monoArguments) {
+#else
 	public static void ParseArguments (string[] args, out string mono, out string workingDirectory, out string[] monoArguments) {
+#endif
 		int arg = 0;
 
+#if CONC_VS_CONC
+		if (args.Length < 3) {
+			throw new ArgumentException ("Usage : ./canalyzer.exe [--stop stop_intervals] mono1 mono2 working-directory [mono-arg1] [mono-arg2] ...");
+		}
+#else
 		if (args.Length < 2) {
 			throw new ArgumentException ("Usage : ./analyzer.exe [--stop stop_intervals] mono working-directory [mono-arg1] [mono-arg2] ...");
 		}
+#endif
 
 		while (args [arg].StartsWith ("--")) {
 			if (args [arg].Equals ("--stop")) {
@@ -80,18 +91,35 @@ public class Program {
 		}
 
 		mono = args [arg++];
+#if CONC_VS_CONC
+		mono2 = args [arg++];
+#endif
 		workingDirectory = args [arg++];
 		monoArguments = args.SubArray<string> (arg);
 	}
 
 	public static void Main (string[] args) {
 		string mono, workingDirectory, target, resultsFolder;
+#if CONC_VS_CONC
+		string mono2;
+#endif
 		string[] monoArguments;
-
+#if CONC_VS_CONC
+		ParseArguments (args, out mono, out mono2, out workingDirectory, out monoArguments);
+#else
 		ParseArguments (args, out mono, out workingDirectory, out monoArguments);
+#endif
 
 		target = Path.GetFileNameWithoutExtension (monoArguments [0]);
 		resultsFolder = Path.Combine ("results", target);
+
+#if CONC_VS_CONC
+		string name1 = mono;
+		string name2 = mono2;
+#else
+		string name1 = "noconc";
+		string name2 = "conc";
+#endif
 
 		Directory.CreateDirectory (resultsFolder);
 		/* Reduce jit compilation delays */
@@ -105,15 +133,19 @@ public class Program {
 			plotModel.LegendBackground = OxyColors.LightGray;
 			plotModel.LegendBorder = OxyColors.Black;
 
+#if CONC_VS_CONC
+			RunMono (mono, monoArguments, workingDirectory, true);
+#else
 			RunMono (mono, monoArguments, workingDirectory, false);
+#endif
 			referenceTime = memoryUsage [memoryUsage.Count - 1].x;
 			ParseBinProtOutput ();
-			AddPlotData ("noconc");
+			AddPlotData (name1);
 			noconcRunStats.Add (GetStats ());
 
 			RunMono (mono, monoArguments, workingDirectory, true);
 			ParseBinProtOutput ();
-			AddPlotData ("conc");
+			AddPlotData (name2);
 			concRunStats.Add (GetStats ());
 
 			Plot (svgFile);
@@ -121,8 +153,8 @@ public class Program {
 
 		string statsFile = Path.Combine (resultsFolder, "stats");
 		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
-			OutputStat ("noconc", AggregateStats (noconcRunStats), statsWriter);
-			OutputStat ("conc", AggregateStats (concRunStats), statsWriter);
+			OutputStat (name1, AggregateStats (noconcRunStats), statsWriter);
+			OutputStat (name2, AggregateStats (concRunStats), statsWriter);
 		}
 	}
 
