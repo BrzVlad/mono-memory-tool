@@ -90,10 +90,10 @@ public class Program {
 			}
 		}
 
-		mono = args [arg++];
 #if CONC_VS_CONC
 		mono2 = args [arg++];
 #endif
+		mono = args [arg++];
 		workingDirectory = args [arg++];
 		monoArguments = args.SubArray<string> (arg);
 	}
@@ -114,8 +114,8 @@ public class Program {
 		resultsFolder = Path.Combine ("results", target);
 
 #if CONC_VS_CONC
-		string name1 = mono;
-		string name2 = mono2;
+		string name1 = mono2;
+		string name2 = mono;
 #else
 		string name1 = "noconc";
 		string name2 = "conc";
@@ -134,7 +134,7 @@ public class Program {
 			plotModel.LegendBorder = OxyColors.Black;
 
 #if CONC_VS_CONC
-			RunMono (mono, monoArguments, workingDirectory, true);
+			RunMono (mono2, monoArguments, workingDirectory, true);
 #else
 			RunMono (mono, monoArguments, workingDirectory, false);
 #endif
