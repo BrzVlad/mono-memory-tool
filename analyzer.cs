@@ -338,7 +338,7 @@ public class Program {
 			} else if (timestampRegex.IsMatch (line)) {
 				Match m = timestampRegex.Match (line);
 				/* original output is in 100ns ticks */
-				timestamp = ((float)int.Parse (m.Groups [1].Value)) / 10000000;
+				timestamp = (float)(((double)long.Parse (m.Groups [1].Value)) / 10000000);
 				if (interval.done) {
 					interval.end = timestamp;
 					intervals.Add (interval);
@@ -380,10 +380,10 @@ public class Program {
 
 		while ((line = reader.ReadLine ()) != null) {
 			if (startRegex.IsMatch (line)) {
-				interval.start = ((float)int.Parse (startRegex.Match (line).Groups [1].Value)) / 10000000;
+				interval.start = (float)(((double)long.Parse (startRegex.Match (line).Groups [1].Value)) / 10000000);
 			} else if (endRegex.IsMatch (line)) {
 				interval.generation = int.Parse (endRegex.Match (line).Groups [1].Value);
-				interval.end = ((float)int.Parse (endRegex.Match (line).Groups [2].Value)) / 10000000;
+				interval.end = (float)(((double)long.Parse (endRegex.Match (line).Groups [2].Value)) / 10000000);
 				stopIntervals.Add (interval);
 			}
 		}
