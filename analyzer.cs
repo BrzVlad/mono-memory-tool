@@ -270,11 +270,11 @@ public class Program {
 
 		statsWriter.WriteLine ();
 		statsWriter.WriteLine ("Total pause time (ms)	{0}", runStats.totalPause);
-		statsWriter.WriteLine ("Minor stops		{0}", runStats.numMinor);
+		statsWriter.WriteLine ("Minor stops		{0}", runStats.numMinorStops);
 		statsWriter.WriteLine ("Min minor (ms)		{0}", runStats.minMinor);
 		statsWriter.WriteLine ("Max minor (ms)		{0}", runStats.maxMinor);
 		statsWriter.WriteLine ("Avg minor (ms)		{0}", runStats.avgMinor);
-		statsWriter.WriteLine ("Major stops		{0}", runStats.numMajor);
+		statsWriter.WriteLine ("Major stops		{0}", runStats.numMajorStops);
 		statsWriter.WriteLine ("Min major (ms)		{0}", runStats.minMajor);
 		statsWriter.WriteLine ("Max major (ms)		{0}", runStats.maxMajor);
 		statsWriter.WriteLine ("Avg major (ms)		{0}", runStats.avgMajor);
