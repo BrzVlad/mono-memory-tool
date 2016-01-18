@@ -29,7 +29,7 @@ public struct Point {
 public struct Interval {
 	public float start, end;
 	public bool done;
-	public int generation;
+	public int generation; /* 0 nursery, 1 major, 2 concurrent_start */
 }
 
 public static class ArrayExtensions {
@@ -235,9 +235,8 @@ public class Program {
 				if (intervalDuration > maxMajor)
 					maxMajor = intervalDuration;
 				avgMajor += intervalDuration;
-			} else {
-				throw new Exception ("Invalid genration");
 			}
+			/* Ignore concurrent_start intervals */
 		}
 		avgMinor /= numMinor;
 		avgMajor /= numMajor;
@@ -376,15 +375,21 @@ public class Program {
 
 		Regex startRegex = new Regex (@"world_stopped generation \d+ timestamp (\d+)");
 		Regex endRegex = new Regex (@"world_restarted generation (\d+) timestamp (\d+)");
+		Regex concStartRegex = new Regex ("concurrent_start");
 		Interval interval = new Interval ();
 
 		while ((line = reader.ReadLine ()) != null) {
 			if (startRegex.IsMatch (line)) {
+				interval = new Interval ();
 				interval.start = (float)(((double)long.Parse (startRegex.Match (line).Groups [1].Value)) / 10000000);
 			} else if (endRegex.IsMatch (line)) {
-				interval.generation = int.Parse (endRegex.Match (line).Groups [1].Value);
+				/* check this is not concurrent start */
+				if (interval.generation != 2)
+					interval.generation = int.Parse (endRegex.Match (line).Groups [1].Value);
 				interval.end = (float)(((double)long.Parse (endRegex.Match (line).Groups [2].Value)) / 10000000);
 				stopIntervals.Add (interval);
+			} else if (concStartRegex.IsMatch (line)) {
+				interval.generation = 2;
 			}
 		}
 
