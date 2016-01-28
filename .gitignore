@@ -1,0 +1,5 @@
+.*
+results*
+*.exe
+*.exe.mdb
+sgen-grep-binprot
