@@ -371,6 +371,7 @@ public class Program {
 	public static void ParseStopIntervals (string s) {
 		stopIntervals = new List<Interval> ();
 		StringReader reader = new StringReader (s);
+		int last_major = 0;
 		string line;
 
 		Regex startRegex = new Regex (@"world_stopped generation \d+ timestamp (\d+)");
@@ -387,11 +388,16 @@ public class Program {
 				if (interval.generation != 2)
 					interval.generation = int.Parse (endRegex.Match (line).Groups [1].Value);
 				interval.end = (float)(((double)long.Parse (endRegex.Match (line).Groups [2].Value)) / 10000000);
+				if (interval.generation == 1)
+					last_major = stopIntervals.Count;
 				stopIntervals.Add (interval);
 			} else if (concStartRegex.IsMatch (line)) {
 				interval.generation = 2;
 			}
 		}
+
+		/* Last major collection is from domain_unload, ignore it */
+		stopIntervals.RemoveRange (last_major, stopIntervals.Count - last_major);
 
 		plotStopIntervals = stopIntervals.OrderByDescending (ival => ival.end - ival.start).Take (num_stop_intervals).OrderBy (ival => ival.start).ToList<Interval> ();
 
