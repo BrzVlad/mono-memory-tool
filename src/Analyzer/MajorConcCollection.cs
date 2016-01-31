@@ -20,7 +20,9 @@ public class MajorConcCollection : GCCollection {
 		double last_nursery_end = default(double);
 
 		foreach (GCEvent gcEvent in gcEvents) {
-			if (gcEvent.Type == GCEventType.NURSERY_END) {
+			if (gcEvent.Type == GCEventType.MAJOR_REQUEST_FORCE) {
+				current = null;
+			} else if (gcEvent.Type == GCEventType.NURSERY_END) {
 				last_nursery_end = gcEvent.Timestamp;
 				if (current != null)
 					current.num_minor++;
@@ -34,7 +36,7 @@ public class MajorConcCollection : GCCollection {
 				 * start entry.
 				 */
 				current.end_of_start_timestamp = last_nursery_end;
-			} else if (gcEvent.Type == GCEventType.CONCURRENT_FINISH) {
+			} else if (gcEvent.Type == GCEventType.CONCURRENT_FINISH && current != null) {
 				current.start_of_end_timestamp = gcEvent.Timestamp;
 			} else if (gcEvent.Type == GCEventType.MAJOR_END && current != null) {
 				current.end_timestamp = gcEvent.Timestamp;

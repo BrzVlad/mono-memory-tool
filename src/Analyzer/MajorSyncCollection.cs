@@ -11,11 +11,18 @@ public class MajorSyncCollection : GCCollection {
 	{
 		List<MajorSyncCollection> majorSyncCollections = new List<MajorSyncCollection> ();
 		MajorSyncCollection current = null;
+		bool force = false;
 
 		foreach (GCEvent gcEvent in gcEvents) {
-			if (gcEvent.Type == GCEventType.MAJOR_START) {
-				current = new MajorSyncCollection ();
-				current.start_timestamp = gcEvent.Timestamp;
+			if (gcEvent.Type == GCEventType.MAJOR_REQUEST_FORCE) {
+				force = true;
+			} else if (gcEvent.Type == GCEventType.MAJOR_START) {
+				if (force) {
+					force = false;
+				} else {
+					current = new MajorSyncCollection ();
+					current.start_timestamp = gcEvent.Timestamp;
+				}
 			} else if (gcEvent.Type == GCEventType.MAJOR_END && current != null) {
 				current.end_timestamp = gcEvent.Timestamp;
 				Utils.Assert (current.start_timestamp != default(double));

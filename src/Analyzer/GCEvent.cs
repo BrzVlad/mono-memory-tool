@@ -11,6 +11,7 @@ public enum GCEventType {
 	MAJOR_END,
 	CONCURRENT_START,
 	CONCURRENT_FINISH,
+	MAJOR_REQUEST_FORCE,
 }
 
 public class GCEvent {
@@ -29,6 +30,7 @@ public class GCEvent {
 			new GCEventTypeMatcher () { type = GCEventType.MAJOR_END, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_end \d+ generation 1") },
 			new GCEventTypeMatcher () { type = GCEventType.CONCURRENT_START, timestampType = GCEventTimestampType.BEFORE, match = new Regex ("concurrent_start") },
 			new GCEventTypeMatcher () { type = GCEventType.CONCURRENT_FINISH, timestampType = GCEventTimestampType.BEFORE, match = new Regex ("concurrent_finish") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_REQUEST_FORCE, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_requested generation 1 requested_size \d+ force true") },
 			};
 
 		public GCEventType type;
