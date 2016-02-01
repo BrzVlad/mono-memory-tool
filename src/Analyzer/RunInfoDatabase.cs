@@ -7,6 +7,34 @@ using OxyPlot.Axes;
 public class RunInfoDatabase {
 	public List<RunInfo> noconcRuns = new List<RunInfo>();
 	public List<RunInfo> concRuns = new List<RunInfo>();
+	private bool outliers_removed = false;
+
+	private void RemoveOutliers (List<RunInfo> runs)
+	{
+		if (runs.Count > 2) {
+			RunInfo min = runs [0];
+			RunInfo max = runs [0];
+			foreach (RunInfo run in runs) {
+				if (run.Time < min.Time)
+					min = run;
+				if (run.Time > max.Time)
+					max = run;
+			}
+			runs.Remove (min);
+			runs.Remove (max);
+		}
+	}
+
+	private void RemoveOutliers ()
+	{
+		if (outliers_removed)
+			return;
+
+		RemoveOutliers (noconcRuns);
+		RemoveOutliers (concRuns);
+
+		outliers_removed = true;
+	}
 
 	public void Plot (string resultsFolder, string noconc, string conc)
 	{
@@ -31,7 +59,25 @@ public class RunInfoDatabase {
 		}
 	}
 
+	private OutputStatSet GetStats (List<RunInfo> runs, string name)
+	{
+		OutputStatSet resultStat = new OutputStatSet (name);
+		foreach (RunInfo runInfo in runs) {
+			resultStat += runInfo.GetStats ();
+		}
+		return resultStat;
+	}
+
 	public void OutputStats (string resultsFolder, string noconc, string conc)
 	{
+		RemoveOutliers ();
+
+		OutputStatSet noconcStats = GetStats (noconcRuns, noconc);
+		OutputStatSet concStats = GetStats (concRuns, conc);
+
+		string statsFile = Path.Combine (resultsFolder, "stats");
+		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
+			statsWriter.Write (OutputStatSet.ToString (noconcStats, concStats));
+		}
 	}
 }

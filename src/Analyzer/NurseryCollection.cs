@@ -7,6 +7,15 @@ public class NurseryCollection : GCCollection {
 		new PlotInterval (start_timestamp, end_timestamp, PlotInterval.green).Plot (plotModel, timestamps, memoryUsage);
 	}
 
+	public override OutputStatSet GetStats ()
+	{
+		OutputStatSet stats = new OutputStatSet ();
+		stats |= new OutputStat ("Total Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.SUM);
+		stats |= new OutputStat ("Avg Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.AVERAGE);
+		stats |= new OutputStat ("Max Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MAX);
+		return stats;
+	}
+
 	public static List<NurseryCollection> ParseNurseryCollections (List<GCEvent> gcEvents)
 	{
 		List<NurseryCollection> nurseryCollections = new List<NurseryCollection> ();

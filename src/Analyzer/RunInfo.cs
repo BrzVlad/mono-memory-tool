@@ -1,18 +1,22 @@
 using System.Collections.Generic;
+using System.Linq;
 using OxyPlot;
 using OxyPlot.Series;
 
 public class RunInfo {
-	private List<NurseryCollection> nurseryCollections;
-	private List<MajorSyncCollection> majorSyncCollections;
-	private List<MajorConcCollection> majorConcCollections;
+	private const double referenceRunTime = 1.0;
+	public List<NurseryCollection> nurseryCollections;
+	public List<MajorSyncCollection> majorSyncCollections;
+	public List<MajorConcCollection> majorConcCollections;
 	private List<GCEvent> gcEvents;
 	private List<double> timestamps;
 	private List<double> memoryUsage; /* usage for each timestamp entry */
 
-	private static byte lineColor = 0;
-
-	public double referenceTime;
+	public double Time {
+		get {
+			return timestamps [timestamps.Count - 1];
+		}
+	}
 
 	public RunInfo (List<double> stamps, List<double> mem, List<GCEvent> gcev)
 	{
@@ -24,6 +28,7 @@ public class RunInfo {
 		majorConcCollections = MajorConcCollection.ParseMajorConcCollections (gcEvents);
 	}
 
+	private static byte lineColor = 0;
 	public void Plot (PlotModel plotModel, string name)
 	{
 		LineSeries lineSeries = new LineSeries ();
@@ -35,15 +40,63 @@ public class RunInfo {
 			lineSeries.Points.Add (new DataPoint (timestamps [i], memoryUsage [i]));
 		plotModel.Series.Add (lineSeries);
 
-		PlotGCCollectionList<MajorSyncCollection> (plotModel, majorSyncCollections);
-		PlotGCCollectionList<MajorConcCollection> (plotModel, majorConcCollections);
-		PlotGCCollectionList<NurseryCollection> (plotModel, nurseryCollections);
+		PlotGCCollectionList (plotModel, majorSyncCollections);
+		PlotGCCollectionList (plotModel, majorConcCollections);
+		PlotGCCollectionList (plotModel, nurseryCollections);
 	}
 
-	private void PlotGCCollectionList<T> (PlotModel plotModel, List<T> collectionList) where T : GCCollection
+	private void PlotGCCollectionList (PlotModel plotModel, IEnumerable<GCCollection> collectionList)
 	{
-		foreach (T collection in collectionList) {
+		foreach (GCCollection collection in collectionList) {
 			collection.Plot (plotModel, timestamps, memoryUsage);
 		}
+	}
+
+	private double ComputeMemoryUsage ()
+	{
+		double memoryUsageStat = 0.0;
+
+		for (int i = 1; i < timestamps.Count - 1; i++)
+			memoryUsageStat += (timestamps [i] - timestamps [i - 1]) * (memoryUsage [i] + memoryUsage [i - 1]) / 2;
+		memoryUsageStat = memoryUsageStat * referenceRunTime / Time;
+
+		return memoryUsageStat;
+	}
+
+	public OutputStatSet GetStats ()
+	{
+		OutputStatSet nurseryStat = null;
+		OutputStatSet majorStat = null;
+		OutputStatSet resultStat = new OutputStatSet ();
+		IEnumerable<GCCollection> majorList;
+
+		if (majorSyncCollections.Count > 0) {
+			majorList = majorSyncCollections;
+			Utils.Assert (majorConcCollections.Count == 0);
+		} else if (majorConcCollections.Count > 0) {
+			majorList = majorConcCollections;
+			Utils.Assert (majorSyncCollections.Count == 0);
+		} else {
+			majorList = new List<GCCollection> ();
+		}
+
+		resultStat |= new OutputStat ("Time (ms)", Time, CumulationType.AVERAGE);
+		resultStat |= new OutputStat ("Num Minor", nurseryCollections.Count, CumulationType.AVERAGE);
+		resultStat |= new OutputStat ("Num Major", majorList.Count<GCCollection> (), CumulationType.AVERAGE);
+		resultStat |= new OutputStat ("Avg Mem Usage (MB)", ComputeMemoryUsage (), CumulationType.AVERAGE);
+
+		resultStat |= OutputStat.EmptyStat;
+		foreach (NurseryCollection nurseryCollection in nurseryCollections)
+			nurseryStat += nurseryCollection.GetStats ();
+		nurseryStat.Normalize ();
+		resultStat |= nurseryStat;
+
+		resultStat |= OutputStat.EmptyStat;
+		foreach (GCCollection majorCollection in majorList)
+			majorStat += majorCollection.GetStats ();
+		majorStat.Normalize ();
+		resultStat |= majorStat;
+
+		return resultStat;
 	}
 }

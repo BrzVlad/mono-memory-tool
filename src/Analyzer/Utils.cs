@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Runtime.CompilerServices;
 
 public static class Utils {
@@ -7,6 +8,19 @@ public static class Utils {
 		T[] result = new T[data.Length - index];
 		Array.Copy(data, index, result, 0, data.Length - index);
 		return result;
+	}
+
+	public static String Center (this String s, int size)
+	{
+		if (s == null)
+			s = "";
+		AssertGreaterThanEqual<int> (size, s.Length);
+
+		StringBuilder builder = new StringBuilder (size);
+		builder.Append (' ', (size - s.Length) / 2);
+		builder.Append (s);
+		builder.Append (' ', size - (size - s.Length) / 2 - s.Length);
+		return builder.ToString();
 	}
 
 	public static void Assert (bool condition, [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string file = null)
@@ -25,5 +39,11 @@ public static class Utils {
 	{
 		if (t1.Equals (t2))
 			throw new Exception (string.Format ("Assertion at {0}:{1} not met. {2} == {3}", file, lineNumber, t1, t2));
+	}
+
+	public static void AssertGreaterThanEqual<T> (T t1, T t2, [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string file = null) where T : IComparable<T>
+	{
+		if (t1.CompareTo (t2) < 0)
+			throw new Exception (string.Format ("Assertion at {0}:{1} not met. {2} < {3}", file, lineNumber, t1, t2));
 	}
 }

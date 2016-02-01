@@ -6,5 +6,6 @@ public abstract class GCCollection {
 	protected double start_timestamp, end_timestamp;
 
 	public abstract void Plot (PlotModel plotModel, List<double> timestamps, List<double> memoryUsage);
+	public abstract OutputStatSet GetStats ();
 }
 

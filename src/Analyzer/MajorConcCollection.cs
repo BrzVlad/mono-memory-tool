@@ -13,6 +13,21 @@ public class MajorConcCollection : GCCollection {
 		new PlotInterval (start_of_end_timestamp, end_timestamp, PlotInterval.red).Plot (plotModel, timestamps, memoryUsage);
 	}
 
+	public override OutputStatSet GetStats ()
+	{
+		OutputStatSet stats = new OutputStatSet ();
+		stats |= new OutputStat ("Total Major Pause (ms)", (end_timestamp - start_of_end_timestamp + end_of_start_timestamp - start_timestamp) * 1000, CumulationType.SUM);
+		stats |= new OutputStat ("Avg Major Pause (ms)", (end_timestamp - start_of_end_timestamp) * 1000, CumulationType.AVERAGE);
+		stats |= new OutputStat ("Max Major Pause (ms)", (end_timestamp - start_of_end_timestamp) * 1000, CumulationType.MAX);
+		stats |= new OutputStat ("Avg Conc M&S (ms)", (start_of_end_timestamp - end_of_start_timestamp) * 1000, CumulationType.AVERAGE);
+		stats |= new OutputStat ("Max Conc M&S (ms)", (start_of_end_timestamp - end_of_start_timestamp) * 1000, CumulationType.MAX);
+		stats |= new OutputStat ("Avg Start Pause (ms)", (end_of_start_timestamp - start_timestamp) * 1000, CumulationType.AVERAGE);
+		stats |= new OutputStat ("Max Start Pause (ms)", (end_of_start_timestamp - start_timestamp) * 1000, CumulationType.MAX);
+		stats |= new OutputStat ("Avg Minor while Conc", num_minor, CumulationType.AVERAGE);
+		stats |= new OutputStat ("Max Minor while Conc", num_minor, CumulationType.MAX);
+		return stats;
+	}
+
 	public static List<MajorConcCollection> ParseMajorConcCollections (List<GCEvent> gcEvents)
 	{
 		List<MajorConcCollection> majorConcCollections = new List<MajorConcCollection> ();
