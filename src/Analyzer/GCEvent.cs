@@ -7,11 +7,24 @@ using System.Text.RegularExpressions;
 public enum GCEventType {
 	NURSERY_START,
 	NURSERY_END,
+	MAJOR_CARDTABLE_SCAN_START,
+	MAJOR_CARDTABLE_SCAN_END,
+	LOS_CARDTABLE_SCAN_START,
+	LOS_CARDTABLE_SCAN_END,
 	MAJOR_START,
 	MAJOR_END,
+	MAJOR_MOD_UNION_SCAN_START,
+	MAJOR_MOD_UNION_SCAN_END,
+	LOS_MOD_UNION_SCAN_START,
+	LOS_MOD_UNION_SCAN_END,
 	CONCURRENT_START,
 	CONCURRENT_FINISH,
 	MAJOR_REQUEST_FORCE,
+	WORKER_FINISH,
+	WORKER_FINISH_FORCED,
+	EVACUATING_BLOCKS,
+	FINISH_GRAY_STACK_START,
+	FINISH_GRAY_STACK_END,
 }
 
 public class GCEvent {
@@ -31,6 +44,19 @@ public class GCEvent {
 			new GCEventTypeMatcher () { type = GCEventType.CONCURRENT_START, timestampType = GCEventTimestampType.BEFORE, match = new Regex ("concurrent_start") },
 			new GCEventTypeMatcher () { type = GCEventType.CONCURRENT_FINISH, timestampType = GCEventTimestampType.BEFORE, match = new Regex ("concurrent_finish") },
 			new GCEventTypeMatcher () { type = GCEventType.MAJOR_REQUEST_FORCE, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_requested generation 1 requested_size \d+ force true") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_CARDTABLE_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_start timestamp \d+ mod_union false") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_CARDTABLE_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_end timestamp \d+ mod_union false") },
+			new GCEventTypeMatcher () { type = GCEventType.LOS_CARDTABLE_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_start timestamp \d+ mod_union false") },
+			new GCEventTypeMatcher () { type = GCEventType.LOS_CARDTABLE_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_end timestamp \d+ mod_union false") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_MOD_UNION_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_start timestamp \d+ mod_union true") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_MOD_UNION_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_end timestamp \d+ mod_union true") },
+			new GCEventTypeMatcher () { type = GCEventType.LOS_MOD_UNION_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_start timestamp \d+ mod_union true") },
+			new GCEventTypeMatcher () { type = GCEventType.LOS_MOD_UNION_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_end timestamp \d+ mod_union true") },
+			new GCEventTypeMatcher () { type = GCEventType.WORKER_FINISH, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"worker_finish timestamp \d+ forced false") },
+			new GCEventTypeMatcher () { type = GCEventType.WORKER_FINISH_FORCED, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"worker_finish timestamp \d+ forced true") },
+			new GCEventTypeMatcher () { type = GCEventType.EVACUATING_BLOCKS, timestampType = GCEventTimestampType.BEFORE, match = new Regex (@"evacuating_blocks block_size \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.FINISH_GRAY_STACK_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"finish_gray_stack_start timestamp \d+ generation \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.FINISH_GRAY_STACK_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"finish_gray_stack_end timestamp \d+ generation \d+") },
 			};
 
 		public GCEventType type;

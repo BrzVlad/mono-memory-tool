@@ -51,7 +51,7 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		StringBuilder builder = new StringBuilder ();
 
 		if (name != null) {
-			builder.Append (name.Center (OutputStat.EmptyStat.Name.Length));
+			builder.Append (name.Center (OutputStat.EmptyStat.ToString ().Length));
 			builder.AppendLine ();
 		}
 		foreach (OutputStat stat in stats) {
@@ -90,8 +90,9 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 			int index2 = s2.FindStatIndex (s1 [i]);
 
 			if (index2 != -1) {
-				if (sharedStats.Count > 0)
-					Utils.Assert (index2 >= sharedStats [sharedStats.Count - 1].Item2);
+				if (sharedStats.Count > 0) {
+					Utils.AssertGreaterThanEqual (index2, sharedStats [sharedStats.Count - 1].Item2);
+				}
 				sharedStats.Add (Tuple.Create<int,int> (index1, index2));
 			}
 		}
