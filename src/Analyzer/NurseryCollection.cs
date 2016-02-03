@@ -11,7 +11,7 @@ public class NurseryCollection : GCCollection {
 	{
 		OutputStatSet stats = new OutputStatSet ();
 		stats |= new OutputStat ("Total Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.SUM);
-		stats |= new OutputStat ("Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+		stats ^= new OutputStat ("Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 

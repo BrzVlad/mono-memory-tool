@@ -57,11 +57,11 @@ public class OutputStat {
 	public override string ToString ()
 	{
 		if (this == EmptyStat)
-			return string.Format ("{0,25} {1,-25}", "", "");
+			return string.Format ("{0,25}  {1,-25}", "", "");
 		else if (cumulation_type == CumulationType.MIN_MAX_AVG)
-			return string.Format ("{0,25} {1,-25}", Name, string.Format ("{0:0.##} ({1:0.##}-{2:0.##})", Value, min_val, max_val));
+			return string.Format ("{0,25}  {1,-25}", Name, string.Format ("{0:0.##} ({1:0.##}-{2:0.##})", Value, min_val, max_val));
 		else
-			return string.Format ("{0,25} {1,-25:0.##}", Name, Value);
+			return string.Format ("{0,25}  {1,-25:0.##}", Name, Value);
 	}
 
 	public static OutputStat operator + (OutputStat o1, OutputStat o2)

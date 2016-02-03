@@ -11,7 +11,7 @@ public class MajorSyncCollection : GCCollection {
 	{
 		OutputStatSet stats = new OutputStatSet ();
 		stats |= new OutputStat ("Total Major Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.SUM);
-		stats |= new OutputStat ("Major Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+		stats ^= new OutputStat ("Major Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 

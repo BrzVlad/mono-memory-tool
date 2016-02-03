@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using OxyPlot;
@@ -5,9 +6,9 @@ using OxyPlot.Series;
 
 public class RunInfo {
 	private const double referenceRunTime = 1.0;
-	public List<NurseryCollection> nurseryCollections;
-	public List<MajorSyncCollection> majorSyncCollections;
-	public List<MajorConcCollection> majorConcCollections;
+	private List<NurseryCollection> nurseryCollections;
+	private List<MajorSyncCollection> majorSyncCollections;
+	private List<MajorConcCollection> majorConcCollections;
 	private List<GCEvent> gcEvents;
 	private List<double> timestamps;
 	private List<double> memoryUsage; /* usage for each timestamp entry */
@@ -98,5 +99,23 @@ public class RunInfo {
 		resultStat |= majorStat;
 
 		return resultStat;
+	}
+
+	public List<OutputStatSet> GetTopMinorStats (int count)
+	{
+		List<OutputStatSet> stats = nurseryCollections.ConvertAll (new Converter<NurseryCollection,OutputStatSet> (nrs => nrs.GetStats ()));
+		stats.Sort ();
+		return stats.GetRange (0, Math.Min (count, stats.Count));
+	}
+
+	public List<OutputStatSet> GetTopMajorStats (int count)
+	{
+		List<OutputStatSet> stats = null;
+		if (majorSyncCollections.Count > 0)
+			stats = majorSyncCollections.ConvertAll (new Converter<MajorSyncCollection,OutputStatSet> (mjr => mjr.GetStats ()));
+		else if (majorConcCollections.Count > 0)
+			stats = majorConcCollections.ConvertAll (new Converter<MajorConcCollection,OutputStatSet> (mjr => mjr.GetStats ()));
+		stats.Sort ();
+		return stats.GetRange (0, Math.Min (count, stats.Count));
 	}
 }

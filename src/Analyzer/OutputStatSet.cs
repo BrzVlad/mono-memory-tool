@@ -2,8 +2,11 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 
-public class OutputStatSet {
+public class OutputStatSet : IComparable<OutputStatSet> {
 	private List<OutputStat> stats = new List<OutputStat> ();
+	private OutputStat sort_stat;
+
+	public static readonly OutputStatSet EmptyStatSet = new OutputStatSet ();
 
 	private OutputStat this [int i] {
 		get { return stats [i]; }
@@ -12,6 +15,13 @@ public class OutputStatSet {
 
 	private int Count {
 		get { return stats.Count; }
+	}
+
+	private double SortValue {
+		get {
+			Utils.Assert (sort_stat != null);
+			return sort_stat.Value;
+		}
 	}
 
 	private string name = null;
@@ -56,6 +66,12 @@ public class OutputStatSet {
 	{
 		foreach (OutputStat stat in stats)
 			stat.Normalize ();
+	}
+
+	public int CompareTo (OutputStatSet other)
+	{
+		/* Descending sort by default */
+		return other.SortValue.CompareTo (SortValue);
 	}
 
 	public static string ToString (OutputStatSet s1, OutputStatSet s2) {
@@ -122,7 +138,12 @@ public class OutputStatSet {
 			Utils.AssertEqual<int> (s1.Count, s2.Count);
 
 			for (int i = 0; i < s1.Count; i++) {
-				stat_result.stats.Add (s1 [i] + s2 [i]);
+				OutputStat sum_stat = s1 [i] + s2 [i];
+				if (s1.sort_stat == s1 [i]) {
+					Utils.AssertEqualRef (s2.sort_stat, s2 [i]);
+					stat_result.sort_stat = sum_stat;
+				}
+				stat_result.stats.Add (sum_stat);
 			}
 		}
 
@@ -167,6 +188,14 @@ public class OutputStatSet {
 		int index = set.FindStatIndex (stat);
 		Utils.AssertEqual<int> (index, -1);
 		set.stats.Add (stat);
+		return set;
+	}
+
+	/* Warning! This operator mutates, only use ^= */
+	public static OutputStatSet operator ^ (OutputStatSet set, OutputStat stat)
+	{
+		set |= stat;
+		set.sort_stat = stat;
 		return set;
 	}
 }

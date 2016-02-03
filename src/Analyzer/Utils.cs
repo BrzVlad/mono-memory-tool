@@ -29,6 +29,12 @@ public static class Utils {
 			throw new Exception (string.Format ("Assertion at {0}:{1} not met", file, lineNumber));
 	}
 
+	public static void AssertEqualRef (object t1, object t2, [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string file = null)
+	{
+		if (t1 != t2)
+			throw new Exception (string.Format ("Assertion at {0}:{1} not met. {2} != {3}", file, lineNumber, t1, t2));
+	}
+
 	public static void AssertEqual<T> (T t1, T t2, [CallerLineNumber] int lineNumber = 0, [CallerFilePath] string file = null) where T : IEquatable<T>
 	{
 		if (!t1.Equals (t2))

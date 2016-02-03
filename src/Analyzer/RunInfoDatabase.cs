@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
@@ -70,16 +71,50 @@ public class RunInfoDatabase {
 		return resultStat;
 	}
 
-	public void OutputStats (string resultsFolder, string noconc, string conc)
+	private void OutputOverallStats (string resultsFolder, string noconc, string conc)
 	{
-		RemoveOutliers ();
-
 		OutputStatSet noconcStats = GetStats (noconcRuns, noconc);
 		OutputStatSet concStats = GetStats (concRuns, conc);
 
-		string statsFile = Path.Combine (resultsFolder, "stats");
+		string statsFile = Path.Combine (resultsFolder, "stats-overall");
 		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 			statsWriter.Write (OutputStatSet.ToString (noconcStats, concStats));
 		}
+	}
+
+	private void OutputStatListComparison (StreamWriter statsWriter, List<OutputStatSet> s1, List<OutputStatSet> s2)
+	{
+		for (int i = 0; i < Math.Max (s1.Count, s2.Count); i++) {
+			OutputStatSet stat1 = OutputStatSet.EmptyStatSet;
+			OutputStatSet stat2 = OutputStatSet.EmptyStatSet;
+			if (i < s1.Count)
+				stat1 = s1 [i];
+			if (i < s2.Count)
+				stat2 = s2 [i];
+			statsWriter.WriteLine (OutputStatSet.ToString (stat1, stat2));
+		}
+	}
+
+	private void OutputPerRunStats (string resultsFolder, string noconc, string conc)
+	{
+		for (int i = 0; i < noconcRuns.Count; i++) {
+			string statsFile = Path.Combine (resultsFolder, "majors" + i);
+			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
+				statsWriter.WriteLine ("Majors");
+				OutputStatListComparison (statsWriter, noconcRuns [i].GetTopMajorStats (10), concRuns [i].GetTopMajorStats (10));
+			}
+			statsFile = Path.Combine (resultsFolder, "minors" + i);
+			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
+				statsWriter.WriteLine ("Minors");
+				OutputStatListComparison (statsWriter, noconcRuns [i].GetTopMinorStats (10), concRuns [i].GetTopMinorStats (10));
+			}
+		}
+	}
+
+	public void OutputStats (string resultsFolder, string noconc, string conc)
+	{
+		RemoveOutliers ();
+		OutputOverallStats (resultsFolder, noconc, conc);
+		OutputPerRunStats (resultsFolder, noconc, conc);
 	}
 }
