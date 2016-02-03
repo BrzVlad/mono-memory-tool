@@ -1,16 +1,15 @@
 using System;
 
 public enum CumulationType {
-	MIN,
-	MAX,
 	SUM,
-	AVERAGE
+	AVERAGE,
+	MIN_MAX_AVG,
 }
 
 public class OutputStat {
 	private int stat_count; /* if it's a cumulation of same stats */
 	private string stat_name;
-	private double stat_value;
+	private double stat_value, min_val, max_val;
 	private CumulationType cumulation_type;
 
 	public static readonly OutputStat EmptyStat = new OutputStat ("", default(double), CumulationType.AVERAGE);
@@ -23,7 +22,7 @@ public class OutputStat {
 
 	public double Value {
 		get {
-			if (cumulation_type == CumulationType.AVERAGE)
+			if (cumulation_type == CumulationType.AVERAGE || cumulation_type == CumulationType.MIN_MAX_AVG)
 				return stat_value / stat_count;
 			else
 				return stat_value;
@@ -40,21 +39,29 @@ public class OutputStat {
 		stat_name = name;
 		stat_value = val;
 		cumulation_type = cumul;
+		if (cumulation_type == CumulationType.MIN_MAX_AVG) {
+			min_val = stat_value;
+			max_val = stat_value;
+		}
 	}
 
 	public void Normalize ()
 	{
 		stat_value = Value;
 		stat_count = 1;
-		cumulation_type = CumulationType.AVERAGE;
+		if (cumulation_type == CumulationType.SUM) {
+			cumulation_type = CumulationType.AVERAGE;
+		}
 	}
 
 	public override string ToString ()
 	{
 		if (this == EmptyStat)
-			return string.Format ("{0,25} {1,-10:.##}", "", "");
+			return string.Format ("{0,25} {1,-25}", "", "");
+		else if (cumulation_type == CumulationType.MIN_MAX_AVG)
+			return string.Format ("{0,25} {1,-25}", Name, string.Format ("{0:0.##} ({1:0.##}-{2:0.##})", Value, min_val, max_val));
 		else
-			return string.Format ("{0,25} {1,-10:.##}", Name, Value);
+			return string.Format ("{0,25} {1,-25:0.##}", Name, Value);
 	}
 
 	public static OutputStat operator + (OutputStat o1, OutputStat o2)
@@ -73,11 +80,10 @@ public class OutputStat {
 		o_result.cumulation_type = o1.cumulation_type;
 
 		switch (o_result.cumulation_type) {
-			case CumulationType.MIN:
-				o_result.stat_value = Math.Min (o1.stat_value, o2.stat_value);
-				break;
-			case CumulationType.MAX:
-				o_result.stat_value = Math.Max (o1.stat_value, o2.stat_value);
+			case CumulationType.MIN_MAX_AVG:
+				o_result.min_val = Math.Min (o1.min_val, o2.min_val);
+				o_result.max_val = Math.Max (o1.max_val, o2.max_val);
+				o_result.stat_value = o1.stat_value + o2.stat_value;
 				break;
 			case CumulationType.SUM:
 			case CumulationType.AVERAGE:
