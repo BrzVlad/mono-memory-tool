@@ -38,6 +38,8 @@ public class RunInfoDatabase {
 
 	public void Plot (string resultsFolder, string noconc, string conc)
 	{
+		RemoveOutliers ();
+
 		string test_name = Path.GetFileName (resultsFolder);
 		Directory.CreateDirectory (resultsFolder);
 		Utils.AssertEqual<int> (noconcRuns.Count, concRuns.Count);
