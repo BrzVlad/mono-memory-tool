@@ -7,6 +7,8 @@ public class MajorConcCollection : GCCollection {
 	private double major_mod_union_scan_start, major_mod_union_scan_end;
 	private double los_mod_union_scan_start, los_mod_union_scan_end;
 	private double finish_gray_stack_start, finish_gray_stack_end;
+	private double pre_major_mod_union_scan_start, pre_major_mod_union_scan_end;
+	private double pre_los_mod_union_scan_start, pre_los_mod_union_scan_end;
 	private int num_minor;
 	private double evacuated_block_sizes;
 	private double worker_finish;
@@ -26,10 +28,23 @@ public class MajorConcCollection : GCCollection {
 		stats |= new OutputStat ("Evacuated block sizes", evacuated_block_sizes, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Start Pause (ms)", (end_of_start_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Minor while Conc", num_minor, CumulationType.MIN_MAX_AVG);
-		if (worker_finish_forced != default(double))
-			stats |= new OutputStat ("Conc M&S (ms)", (worker_finish_forced - end_of_start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
-		else
-			stats |= new OutputStat ("Conc M&S (ms)", (worker_finish - end_of_start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+		if (pre_major_mod_union_scan_start != default(double)) {
+			stats |= new OutputStat ("Conc M&S (ms)", (pre_major_mod_union_scan_start - end_of_start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+			stats |= new OutputStat ("Major Mod Preclean (ms)", (pre_major_mod_union_scan_end - pre_major_mod_union_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
+			stats |= new OutputStat ("LOS Mod Preclean (ms)", (pre_los_mod_union_scan_end - pre_los_mod_union_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
+			if (worker_finish_forced != default(double))
+				stats |= new OutputStat ("Finish conc M&S (ms)", (worker_finish_forced - pre_los_mod_union_scan_end) * 1000, CumulationType.MIN_MAX_AVG);
+			else
+				stats |= new OutputStat ("Finish conc M&S (ms)", (worker_finish - pre_los_mod_union_scan_end) * 1000, CumulationType.MIN_MAX_AVG);
+		} else {
+			if (worker_finish_forced != default(double))
+				stats |= new OutputStat ("Conc M&S (ms)", (worker_finish_forced - end_of_start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+			else
+				stats |= new OutputStat ("Conc M&S (ms)", (worker_finish - end_of_start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+			stats |= new OutputStat ("Major Mod Preclean (ms)", 0, CumulationType.MIN_MAX_AVG);
+			stats |= new OutputStat ("LOS Mod Preclean (ms)", 0, CumulationType.MIN_MAX_AVG);
+			stats |= new OutputStat ("Finish conc M&S (ms)", 0, CumulationType.MIN_MAX_AVG);
+		}
 		stats ^= new OutputStat ("Major Pause (ms)", (end_timestamp - start_of_end_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		if (worker_finish_forced != default(double))
 			stats |= new OutputStat ("Forced finish (ms)", (worker_finish - start_of_end_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
@@ -73,20 +88,36 @@ public class MajorConcCollection : GCCollection {
 					current.evacuated_block_sizes += 1;
 				break;
 			case GCEventType.MAJOR_MOD_UNION_SCAN_START:
-				if (current != null)
+				if (current != null) {
+					if (current.major_mod_union_scan_start != default(double)) {
+						current.pre_major_mod_union_scan_start = current.major_mod_union_scan_start;
+					}
 					current.major_mod_union_scan_start = gcEvent.Timestamp;
+				}
 				break;
 			case GCEventType.MAJOR_MOD_UNION_SCAN_END:
-				if (current != null)
+				if (current != null) {
+					if (current.major_mod_union_scan_end != default(double)) {
+						current.pre_major_mod_union_scan_end = current.major_mod_union_scan_end;
+					}
 					current.major_mod_union_scan_end = gcEvent.Timestamp;
+				}
 				break;
 			case GCEventType.LOS_MOD_UNION_SCAN_START:
-				if (current != null)
+				if (current != null) {
+					if (current.los_mod_union_scan_start != default(double)) {
+						current.pre_los_mod_union_scan_start = current.los_mod_union_scan_start;
+					}
 					current.los_mod_union_scan_start = gcEvent.Timestamp;
+				}
 				break;
 			case GCEventType.LOS_MOD_UNION_SCAN_END:
-				if (current != null)
+				if (current != null) {
+					if (current.los_mod_union_scan_end != default(double)) {
+						current.pre_los_mod_union_scan_end = current.los_mod_union_scan_end;
+					}
 					current.los_mod_union_scan_end = gcEvent.Timestamp;
+				}
 				break;
 			case GCEventType.WORKER_FINISH_FORCED:
 				if (current != null)
