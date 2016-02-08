@@ -55,8 +55,8 @@ public class Program {
 #endif
 
 #if CONC_VS_CONC
-		string name1 = mono2;
-		string name2 = mono;
+		string name1 = Path.GetFileNameWithoutExtension (mono2);
+		string name2 = Path.GetFileNameWithoutExtension (mono);
 #else
 		string name1 = "noconc";
 		string name2 = "conc";
