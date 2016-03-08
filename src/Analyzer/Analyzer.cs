@@ -84,6 +84,16 @@ public class Program {
 		runInfoDatabase.OutputStats (resultsFolder, name1, name2);
 	}
 
+	private static void AddMonoOption (Process p, string key, string val)
+	{
+		string prev_val = p.StartInfo.EnvironmentVariables [key];
+		if (prev_val != null && !prev_val.Contains (val))
+			p.StartInfo.EnvironmentVariables [key] = string.Join (",", prev_val, val);
+		else
+			p.StartInfo.EnvironmentVariables [key] = val;
+		Console.WriteLine ("Environment [{0}] = {1}", key, p.StartInfo.EnvironmentVariables [key]);
+	}
+
 	public static List<double>[] RunMono (string mono, string[] args, string workingDirectory, bool concurrent)
 	{
 		Process p = new Process ();
@@ -93,8 +103,8 @@ public class Program {
 		p.StartInfo.Arguments = string.Join (" ", args);
 
 		if (concurrent)
-			p.StartInfo.EnvironmentVariables.Add ("MONO_GC_PARAMS", "major=marksweep-conc");
-		p.StartInfo.EnvironmentVariables.Add ("MONO_GC_DEBUG", "binary-protocol=" + binprotFile);
+			AddMonoOption (p, "MONO_GC_PARAMS", "major=marksweep-conc");
+		AddMonoOption (p, "MONO_GC_DEBUG", "binary-protocol=" + binprotFile);
 
 		Console.WriteLine ("Run {0}, concurrent {1}", mono, concurrent);
 		Thread.Sleep (1000);
