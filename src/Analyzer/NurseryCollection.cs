@@ -6,6 +6,8 @@ public class NurseryCollection : GCCollection {
 	private double major_card_table_scan_start, major_card_table_scan_end;
 	private double los_card_table_scan_start, los_card_table_scan_end;
 
+	public NurseryCollection () : base (false) { }
+
 	public override void Plot (PlotModel plotModel, List<double> timestamps, List<double> memoryUsage)
 	{
 		new PlotInterval (start_timestamp, end_timestamp, PlotInterval.green).Plot (plotModel, timestamps, memoryUsage);
@@ -19,7 +21,7 @@ public class NurseryCollection : GCCollection {
 		stats |= new OutputStat ("Major Scan (ms)", (major_card_table_scan_end - major_card_table_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("LOS Scan (ms)", (los_card_table_scan_end - los_card_table_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Minor Finish GS (ms)", (finish_gray_stack_end - finish_gray_stack_start) * 1000, CumulationType.MIN_MAX_AVG);
-		return stats;
+		return stats | base.GetStats ();
 	}
 
 	public static List<NurseryCollection> ParseNurseryCollections (List<GCEvent> gcEvents)
@@ -71,6 +73,10 @@ public class NurseryCollection : GCCollection {
 				 */
 				nurseryCollections.RemoveAt (nurseryCollections.Count - 1);
 				Utils.Assert (current == null);
+				break;
+			default:
+				if (current != null)
+					current.ParseCustomEvent (gcEvent);
 				break;
 			}
 		}

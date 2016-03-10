@@ -14,6 +14,8 @@ public class MajorConcCollection : GCCollection {
 	private double worker_finish;
 	private double worker_finish_forced;
 
+	public MajorConcCollection () : base (true) { }
+
 	public override void Plot (PlotModel plotModel, List<double> timestamps, List<double> memoryUsage)
 	{
 		new PlotInterval (start_timestamp, end_of_start_timestamp, PlotInterval.red).Plot (plotModel, timestamps, memoryUsage);
@@ -53,7 +55,7 @@ public class MajorConcCollection : GCCollection {
 		stats |= new OutputStat ("Mod Union Major Scan (ms)", (major_mod_union_scan_end - major_mod_union_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Mod Union LOS Scan (ms)", (los_mod_union_scan_end - los_mod_union_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Major Finish GS (ms)", (finish_gray_stack_end - finish_gray_stack_start) * 1000, CumulationType.MIN_MAX_AVG);
-		return stats;
+		return stats | base.GetStats ();
 	}
 
 	public static List<MajorConcCollection> ParseMajorConcCollections (List<GCEvent> gcEvents)
@@ -155,6 +157,10 @@ public class MajorConcCollection : GCCollection {
 					majorConcCollections.Add (current);
 					current = null;
 				}
+				break;
+			default:
+				if (current != null)
+					current.ParseCustomEvent (gcEvent);
 				break;
 			}
 		}

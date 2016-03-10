@@ -25,6 +25,8 @@ public enum GCEventType {
 	EVACUATING_BLOCKS,
 	FINISH_GRAY_STACK_START,
 	FINISH_GRAY_STACK_END,
+	CUSTOM_EVENT_START,
+	CUSTOM_EVENT_END,
 }
 
 public class GCEvent {
@@ -57,6 +59,8 @@ public class GCEvent {
 			new GCEventTypeMatcher () { type = GCEventType.EVACUATING_BLOCKS, timestampType = GCEventTimestampType.BEFORE, match = new Regex (@"evacuating_blocks block_size \d+") },
 			new GCEventTypeMatcher () { type = GCEventType.FINISH_GRAY_STACK_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"finish_gray_stack_start timestamp \d+ generation \d+") },
 			new GCEventTypeMatcher () { type = GCEventType.FINISH_GRAY_STACK_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"finish_gray_stack_end timestamp \d+ generation \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.CUSTOM_EVENT_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"custom_event_start timestamp \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.CUSTOM_EVENT_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"custom_event_end timestamp \d+") },
 			};
 
 		public GCEventType type;
