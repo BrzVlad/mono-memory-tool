@@ -159,6 +159,7 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		else if (s2 == null)
 			return s1;
 		OutputStatSet stat_result = new OutputStatSet (s1.name);
+		stat_result.sort_stat = s1.sort_stat;
 
 		foreach (OutputStat stat in s1.stats)
 			stat_result.stats.Add (stat);
