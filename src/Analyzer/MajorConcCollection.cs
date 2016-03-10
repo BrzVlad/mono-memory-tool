@@ -13,6 +13,7 @@ public class MajorConcCollection : GCCollection {
 	private double evacuated_block_sizes;
 	private double worker_finish;
 	private double worker_finish_forced;
+	private double concurrent_sweep_end, next_nursery_start;
 
 	public MajorConcCollection () : base (true) { }
 
@@ -55,19 +56,36 @@ public class MajorConcCollection : GCCollection {
 		stats |= new OutputStat ("Mod Union Major Scan (ms)", (major_mod_union_scan_end - major_mod_union_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Mod Union LOS Scan (ms)", (los_mod_union_scan_end - los_mod_union_scan_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Major Finish GS (ms)", (finish_gray_stack_end - finish_gray_stack_start) * 1000, CumulationType.MIN_MAX_AVG);
+		if (concurrent_sweep_end > end_timestamp) {
+			if (next_nursery_start != default(double) && concurrent_sweep_end > next_nursery_start) {
+				Utils.Assert (next_nursery_start > end_timestamp);
+				stats |= new OutputStat ("Concurrent Sweep (ms)", (next_nursery_start - end_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+				stats |= new OutputStat ("Forced finish Sweep (ms)", (concurrent_sweep_end - next_nursery_start) * 1000, CumulationType.MIN_MAX_AVG);
+			} else {
+				stats |= new OutputStat ("Concurrent Sweep (ms)", (concurrent_sweep_end - end_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
+				stats |= new OutputStat ("Forced finish Sweep (ms)", 0, CumulationType.MIN_MAX_AVG);
+			}
+		} else {
+			stats |= new OutputStat ("Concurrent Sweep (ms)", 0, CumulationType.MIN_MAX_AVG);
+			stats |= new OutputStat ("Forced finish Sweep (ms)", 0, CumulationType.MIN_MAX_AVG);
+		}
 		return stats | base.GetStats ();
 	}
 
 	public static List<MajorConcCollection> ParseMajorConcCollections (List<GCEvent> gcEvents)
 	{
 		List<MajorConcCollection> majorConcCollections = new List<MajorConcCollection> ();
-		MajorConcCollection current = null;
+		MajorConcCollection current = null, last_current = null;
 		double last_nursery_end = default(double);
 
 		foreach (GCEvent gcEvent in gcEvents) {
 			switch (gcEvent.Type) {
 			case GCEventType.MAJOR_REQUEST_FORCE:
 				current = null;
+				break;
+			case GCEventType.NURSERY_START:
+				if (current == null && last_current != null && last_current.next_nursery_start == default(double))
+					last_current.next_nursery_start = gcEvent.Timestamp;
 				break;
 			case GCEventType.NURSERY_END:
 				last_nursery_end = gcEvent.Timestamp;
@@ -76,6 +94,7 @@ public class MajorConcCollection : GCCollection {
 				break;
 			case GCEventType.CONCURRENT_START:
 				current = new MajorConcCollection ();
+				last_current = current;
 				current.start_timestamp = gcEvent.Timestamp;
 				/*
 				 * The nursery end entry has an AFTER timestamp type whereas the concurrent
@@ -155,8 +174,13 @@ public class MajorConcCollection : GCCollection {
 					Utils.Assert (current.end_of_start_timestamp != default(double));
 					Utils.Assert (current.start_of_end_timestamp != default(double));
 					majorConcCollections.Add (current);
+					last_current = current;
 					current = null;
 				}
+				break;
+			case GCEventType.CONCURRENT_SWEEP_END:
+				if (current == null && last_current != null && last_current.concurrent_sweep_end == default(double))
+					last_current.concurrent_sweep_end = gcEvent.Timestamp;
 				break;
 			default:
 				if (current != null)
