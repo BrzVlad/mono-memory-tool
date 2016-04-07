@@ -27,44 +27,37 @@ public class NurseryCollection : GCCollection {
 	public static List<NurseryCollection> ParseNurseryCollections (List<GCEvent> gcEvents)
 	{
 		List<NurseryCollection> nurseryCollections = new List<NurseryCollection> ();
-		NurseryCollection current = null;
+		NurseryCollection current = new NurseryCollection ();
 
 		foreach (GCEvent gcEvent in gcEvents) {
 			switch (gcEvent.Type) {
 			case GCEventType.NURSERY_START:
-				current = new NurseryCollection ();
 				current.start_timestamp = gcEvent.Timestamp;
 				break;
 			case GCEventType.MAJOR_CARDTABLE_SCAN_START:
-				if (current != null)
-					current.major_card_table_scan_start = gcEvent.Timestamp;
+				current.major_card_table_scan_start = gcEvent.Timestamp;
 				break;
 			case GCEventType.MAJOR_CARDTABLE_SCAN_END:
-				if (current != null)
-					current.major_card_table_scan_end = gcEvent.Timestamp;
+				current.major_card_table_scan_end = gcEvent.Timestamp;
 				break;
 			case GCEventType.LOS_CARDTABLE_SCAN_START:
-				if (current != null)
-					current.los_card_table_scan_start = gcEvent.Timestamp;
+				current.los_card_table_scan_start = gcEvent.Timestamp;
 				break;
 			case GCEventType.LOS_CARDTABLE_SCAN_END:
-				if (current != null)
-					current.los_card_table_scan_end = gcEvent.Timestamp;
+				current.los_card_table_scan_end = gcEvent.Timestamp;
 				break;
 			case GCEventType.FINISH_GRAY_STACK_START:
-				if (current != null)
-					current.finish_gray_stack_start = gcEvent.Timestamp;
+				current.finish_gray_stack_start = gcEvent.Timestamp;
 				break;
 			case GCEventType.FINISH_GRAY_STACK_END:
-				if (current != null)
-					current.finish_gray_stack_end = gcEvent.Timestamp;
+				current.finish_gray_stack_end = gcEvent.Timestamp;
 				break;
 			case GCEventType.NURSERY_END:
 				current.end_timestamp = gcEvent.Timestamp;
 				Utils.Assert (current.start_timestamp != default(double));
 				Utils.Assert (current.end_timestamp != default(double));
 				nurseryCollections.Add (current);
-				current = null;
+				current = new NurseryCollection ();
 				break;
 			case GCEventType.CONCURRENT_START:
 				/*
@@ -72,16 +65,13 @@ public class NurseryCollection : GCCollection {
 				 * it as part of the major collection for now.
 				 */
 				nurseryCollections.RemoveAt (nurseryCollections.Count - 1);
-				Utils.Assert (current == null);
 				break;
 			default:
-				if (current != null)
-					current.ParseCustomEvent (gcEvent);
+				current.ParseCustomEvent (gcEvent);
 				break;
 			}
 		}
 
-		Utils.Assert (current == null);
 		return nurseryCollections;
 	}
 }
