@@ -11,6 +11,7 @@ public class OutputStat {
 	private string stat_name;
 	private double stat_value, min_val, max_val;
 	private CumulationType cumulation_type;
+	private bool stat_hidden;
 
 	public static readonly OutputStat EmptyStat = new OutputStat ("", default(double), CumulationType.AVERAGE);
 
@@ -33,11 +34,16 @@ public class OutputStat {
 	{
 	}
 
-	public OutputStat (string name, double val, CumulationType cumul)
+	public OutputStat (string name, double val, CumulationType cumul) : this (name, val, cumul, false)
+	{
+	}
+
+	public OutputStat (string name, double val, CumulationType cumul, bool hidden)
 	{
 		stat_count = 1;
 		stat_name = name;
 		stat_value = val;
+		stat_hidden = hidden;
 		cumulation_type = cumul;
 		if (cumulation_type == CumulationType.MIN_MAX_AVG) {
 			min_val = stat_value;
@@ -56,7 +62,7 @@ public class OutputStat {
 
 	public override string ToString ()
 	{
-		if (this == EmptyStat)
+		if (this == EmptyStat || stat_hidden && stat_value == default(double))
 			return string.Format ("{0,25}  {1,-25}", "", "");
 		else if (cumulation_type == CumulationType.MIN_MAX_AVG)
 			return string.Format ("{0,25}  {1,-25}", Name, string.Format ("{0:0.##} ({1:0.##}-{2:0.##})", Value, min_val, max_val));

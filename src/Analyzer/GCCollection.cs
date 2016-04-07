@@ -5,7 +5,6 @@ public abstract class GCCollection {
 	/* Timestamps are measured in seconds */
 	protected double start_timestamp, end_timestamp;
 	private double custom_event_start, custom_event_end;
-	private bool has_custom_event;
 	private bool major;
 
 	protected GCCollection (bool major)
@@ -18,8 +17,7 @@ public abstract class GCCollection {
 	public virtual OutputStatSet GetStats ()
 	{
 		OutputStatSet stats = new OutputStatSet ();
-		if (has_custom_event)
-			stats |= new OutputStat (string.Format ("{0} Custom Range (ms)", major ? "Major" : "Minor"), (custom_event_end - custom_event_start) * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("{0} Custom Range (ms)", major ? "Major" : "Minor"), (custom_event_end - custom_event_start) * 1000, CumulationType.MIN_MAX_AVG, true);
 		return stats;
 	}
 
@@ -27,12 +25,10 @@ public abstract class GCCollection {
 	{
 		switch (gcEvent.Type) {
 			case GCEventType.CUSTOM_EVENT_START: {
-				has_custom_event = true;
 				custom_event_start = gcEvent.Timestamp;
 				return true;
 			}
 			case GCEventType.CUSTOM_EVENT_END: {
-				has_custom_event = true;
 				custom_event_end = gcEvent.Timestamp;
 				return true;
 			}
