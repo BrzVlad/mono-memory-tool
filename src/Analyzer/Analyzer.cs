@@ -8,7 +8,7 @@ public class Program {
 	public const string binprotFile = "/tmp/binprot";
 	public const string binprotExec = "sgen-grep-binprot";
 
-	public const int numRuns = 5;
+	public const int numRuns = 1;
 
 	public const int deltaHackConc = 4;
 	public const int deltaHackNoconc = deltaHackConc;
