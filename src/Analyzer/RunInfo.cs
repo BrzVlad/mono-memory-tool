@@ -89,13 +89,15 @@ public class RunInfo {
 		resultStat |= OutputStat.EmptyStat;
 		foreach (NurseryCollection nurseryCollection in nurseryCollections)
 			nurseryStat += nurseryCollection.GetStats ();
-		nurseryStat.Normalize ();
+		if (nurseryStat != null)
+			nurseryStat.Normalize ();
 		resultStat |= nurseryStat;
 
 		resultStat |= OutputStat.EmptyStat;
 		foreach (GCCollection majorCollection in majorList)
 			majorStat += majorCollection.GetStats ();
-		majorStat.Normalize ();
+		if (majorStat != null)
+			majorStat.Normalize ();
 		resultStat |= majorStat;
 
 		return resultStat;
@@ -115,6 +117,8 @@ public class RunInfo {
 			stats = majorSyncCollections.ConvertAll (new Converter<MajorSyncCollection,OutputStatSet> (mjr => mjr.GetStats ()));
 		else if (majorConcCollections.Count > 0)
 			stats = majorConcCollections.ConvertAll (new Converter<MajorConcCollection,OutputStatSet> (mjr => mjr.GetStats ()));
+		else
+			stats = new List<OutputStatSet> ();
 		stats.Sort ();
 		return stats.GetRange (0, Math.Min (count, stats.Count));
 	}
