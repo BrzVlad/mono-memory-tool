@@ -76,6 +76,7 @@ public class RunInfoDatabase {
 		OutputStatSet noconcStats = GetStats (noconcRuns, noconc);
 		OutputStatSet concStats = GetStats (concRuns, conc);
 
+		Directory.CreateDirectory (resultsFolder);
 		string statsFile = Path.Combine (resultsFolder, "stats-overall");
 		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 			statsWriter.Write (OutputStatSet.ToString (noconcStats, concStats));

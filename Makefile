@@ -1,7 +1,8 @@
 BENCHMARKS_ANALYZER_SOURCES=$(wildcard src/BenchmarksAnalyzer/*.cs)
 ANALYZER_SOURCES=$(wildcard src/Analyzer/*.cs)
+PARSER_SOURCES=$(wildcard src/Parser/*cs)
 
-all: analyzer.exe canalyzer.exe benchmarks-analyzer.exe benchmarks-canalyzer.exe
+all: analyzer.exe canalyzer.exe benchmarks-analyzer.exe benchmarks-canalyzer.exe parser.exe
 
 benchmarks-analyzer.exe: $(BENCHMARKS_ANALYZER_SOURCES)
 	mcs -debug /out:$@ /r:Newtonsoft.Json.dll $^
@@ -14,6 +15,9 @@ analyzer.exe: $(ANALYZER_SOURCES)
 
 canalyzer.exe: $(ANALYZER_SOURCES)
 	mcs -debug /D:CONC_VS_CONC /out:$@ /r:OxyPlot.dll $^
+
+parser.exe : $(PARSER_SOURCES)
+	mcs -debug /out:$@ /r:OxyPlot.dll $^
 
 clean:
 	rm -rf analyzer.exe* benchmarks-analyzer.exe* canalyzer.exe* benchmarks-canalyzer.exe*
