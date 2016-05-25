@@ -55,8 +55,9 @@ public class NurseryCollection : GCCollection {
 			case GCEventType.NURSERY_END:
 				current.end_timestamp = gcEvent.Timestamp;
 				Utils.Assert (current.start_timestamp != default(double));
-				Utils.Assert (current.end_timestamp != default(double));
-				nurseryCollections.Add (current);
+				/* We lack end_timestamp, probably due to crash and flush fail */
+				if (current.end_timestamp != default(double))
+					nurseryCollections.Add (current);
 				current = new NurseryCollection ();
 				break;
 			case GCEventType.CONCURRENT_START:

@@ -64,8 +64,8 @@ public class MajorSyncCollection : GCCollection {
 				if (current != null) {
 					current.end_timestamp = gcEvent.Timestamp;
 					Utils.Assert (current.start_timestamp != default(double));
-					Utils.Assert (current.end_timestamp != default(double));
-					majorSyncCollections.Add (current);
+					if (current.end_timestamp != default(double))
+						majorSyncCollections.Add (current);
 					last_current = current;
 					current = null;
 				}

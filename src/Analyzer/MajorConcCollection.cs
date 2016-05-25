@@ -170,10 +170,10 @@ public class MajorConcCollection : GCCollection {
 				if (current != null) {
 					current.end_timestamp = gcEvent.Timestamp;
 					Utils.Assert (current.start_timestamp != default(double));
-					Utils.Assert (current.end_timestamp != default(double));
 					Utils.Assert (current.end_of_start_timestamp != default(double));
 					Utils.Assert (current.start_of_end_timestamp != default(double));
-					majorConcCollections.Add (current);
+					if (current.end_timestamp != default(double))
+						majorConcCollections.Add (current);
 					last_current = current;
 					current = null;
 				}
