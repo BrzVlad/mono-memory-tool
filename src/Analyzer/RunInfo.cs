@@ -15,7 +15,10 @@ public class RunInfo {
 
 	public double Time {
 		get {
-			return timestamps [timestamps.Count - 1];
+			if (timestamps != null)
+				return timestamps [timestamps.Count - 1];
+			else
+				return gcEvents [gcEvents.Count - 1].Timestamp;
 		}
 	}
 
@@ -32,6 +35,8 @@ public class RunInfo {
 	private static byte lineColor = 0;
 	public void Plot (PlotModel plotModel, string name)
 	{
+		if (timestamps == null)
+			return;
 		LineSeries lineSeries = new LineSeries ();
 		lineSeries.Title = name;
 		lineSeries.Color = OxyColor.FromRgb (lineColor, lineColor, lineColor);
@@ -55,6 +60,9 @@ public class RunInfo {
 
 	private double ComputeMemoryUsage ()
 	{
+		if (timestamps == null)
+			return 0.0;
+
 		double memoryUsageStat = 0.0;
 
 		for (int i = 1; i < timestamps.Count - 1; i++)
