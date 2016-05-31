@@ -6,8 +6,8 @@ using OxyPlot;
 using OxyPlot.Axes;
 
 public class RunInfoDatabase {
-	public List<RunInfo> noconcRuns = new List<RunInfo>();
-	public List<RunInfo> concRuns = new List<RunInfo>();
+	public List<RunInfo> runs1 = new List<RunInfo>();
+	public List<RunInfo> runs2 = new List<RunInfo>();
 	private bool outliers_removed = false;
 
 	private void RemoveOutliers (List<RunInfo> runs)
@@ -31,20 +31,20 @@ public class RunInfoDatabase {
 		if (outliers_removed)
 			return;
 
-		RemoveOutliers (noconcRuns);
-		RemoveOutliers (concRuns);
+		RemoveOutliers (runs1);
+		RemoveOutliers (runs2);
 
 		outliers_removed = true;
 	}
 
-	public void Plot (string resultsFolder, string noconc, string conc)
+	public void Plot (string resultsFolder, string name1, string name2)
 	{
 		RemoveOutliers ();
 
 		string test_name = Path.GetFileName (resultsFolder);
 		Directory.CreateDirectory (resultsFolder);
-		Utils.AssertEqual<int> (noconcRuns.Count, concRuns.Count);
-		for (int i = 0; i < noconcRuns.Count; i++) {
+		Utils.AssertEqual<int> (runs1.Count, runs2.Count);
+		for (int i = 0; i < runs1.Count; i++) {
 			string svgFile = Path.Combine (resultsFolder, test_name + i + ".svg");
 			PlotModel plotModel  = new PlotModel { Title = test_name };
 			plotModel.Axes.Add (new LinearAxis { Position = AxisPosition.Bottom });
@@ -53,8 +53,8 @@ public class RunInfoDatabase {
 			plotModel.LegendBackground = OxyColors.LightGray;
 			plotModel.LegendBorder = OxyColors.Black;
 
-			noconcRuns [i].Plot (plotModel, noconc);
-			concRuns [i].Plot (plotModel, conc);
+			runs1 [i].Plot (plotModel, name1);
+			runs2 [i].Plot (plotModel, name2);
 
 			using (FileStream stream = new FileStream (svgFile, FileMode.Create)) {
 				SvgExporter.Export (plotModel, stream, 1920, 1080, true);
@@ -71,15 +71,15 @@ public class RunInfoDatabase {
 		return resultStat;
 	}
 
-	private void OutputOverallStats (string resultsFolder, string noconc, string conc)
+	private void OutputOverallStats (string resultsFolder, string name1, string name2)
 	{
-		OutputStatSet noconcStats = GetStats (noconcRuns, noconc);
-		OutputStatSet concStats = GetStats (concRuns, conc);
+		OutputStatSet stats1 = GetStats (runs1, name1);
+		OutputStatSet stats2 = GetStats (runs2, name2);
 
 		Directory.CreateDirectory (resultsFolder);
 		string statsFile = Path.Combine (resultsFolder, "stats-overall");
 		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
-			statsWriter.Write (OutputStatSet.ToString (noconcStats, concStats));
+			statsWriter.Write (OutputStatSet.ToString (stats1, stats2));
 		}
 	}
 
@@ -98,24 +98,24 @@ public class RunInfoDatabase {
 
 	private void OutputPerRunStats (string resultsFolder, string noconc, string conc)
 	{
-		for (int i = 0; i < noconcRuns.Count; i++) {
+		for (int i = 0; i < runs1.Count; i++) {
 			string statsFile = Path.Combine (resultsFolder, "majors" + i);
 			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 				statsWriter.WriteLine ("Majors");
-				OutputStatListComparison (statsWriter, noconcRuns [i].GetTopMajorStats (10), concRuns [i].GetTopMajorStats (10));
+				OutputStatListComparison (statsWriter, runs1 [i].GetTopMajorStats (10), runs2 [i].GetTopMajorStats (10));
 			}
 			statsFile = Path.Combine (resultsFolder, "minors" + i);
 			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 				statsWriter.WriteLine ("Minors");
-				OutputStatListComparison (statsWriter, noconcRuns [i].GetTopMinorStats (10), concRuns [i].GetTopMinorStats (10));
+				OutputStatListComparison (statsWriter, runs1 [i].GetTopMinorStats (10), runs2 [i].GetTopMinorStats (10));
 			}
 		}
 	}
 
-	public void OutputStats (string resultsFolder, string noconc, string conc)
+	public void OutputStats (string resultsFolder, string name1, string name2)
 	{
 		RemoveOutliers ();
-		OutputOverallStats (resultsFolder, noconc, conc);
-		OutputPerRunStats (resultsFolder, noconc, conc);
+		OutputOverallStats (resultsFolder, name1, name2);
+		OutputPerRunStats (resultsFolder, name1, name2);
 	}
 }

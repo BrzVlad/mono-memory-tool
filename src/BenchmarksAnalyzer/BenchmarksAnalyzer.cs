@@ -8,28 +8,18 @@ using Benchmarker.Common.Models;
 public class Program {
 	public static void Main (string[] args)
 	{
-#if CONC_VS_CONC
-		if (args.Length < 3) {
-			Console.WriteLine ("Usage : ./benchmarks-canalyzer.exe mono1 mono2 benchmarker-folder");
+		if (args.Length < 4) {
+			Console.WriteLine ("Usage : ./benchmarks-analyzer.exe mode mono1 mono2 benchmarker-folder");
+			Console.WriteLine ("            mode    : majors for the two monos [s|c|cp]v[s|c|cp]");
+			Console.WriteLine ("            mono2   : if mono2 is '-' then mono1 is used for both runs");
 			return;
 		}
-#else
-		if (args.Length < 2) {
-			Console.WriteLine ("Usage : ./benchmarks-analyzer.exe mono benchmarker-folder");
-			return;
-		}
-#endif
 		int arg = 0;
 
-		string mono = args [arg++];
-#if CONC_VS_CONC
+		string mode = args [arg++];
+		string mono1 = args [arg++];
 		string mono2 = args [arg++];
-#endif
-#if CONC_VS_CONC
-		string analyzer = "canalyzer.exe";
-#else
 		string analyzer = "analyzer.exe";
-#endif
 		string benchmarker_folder = args [arg++];
 		string benchmarks_folder = Path.Combine (benchmarker_folder, "benchmarks");
 		string tests_folder = Path.Combine (benchmarker_folder, "tests");
@@ -42,11 +32,7 @@ public class Program {
 			};
 
 			info.FileName = analyzer;
-#if CONC_VS_CONC
-			info.Arguments = mono + " " + mono2 + " " + Path.Combine (tests_folder, b.TestDirectory) + " " + string.Join (" ", b.CommandLine);
-#else
-			info.Arguments = mono + " " + Path.Combine (tests_folder, b.TestDirectory) + " " + string.Join (" ", b.CommandLine);
-#endif
+			info.Arguments = mode + " " + mono1 + " " + mono2 + " " + Path.Combine (tests_folder, b.TestDirectory) + " " + string.Join (" ", b.CommandLine);
 
 			Console.WriteLine ("{0}", b.Name);
 			Process ps = Process.Start (info);

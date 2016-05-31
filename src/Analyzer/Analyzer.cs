@@ -5,76 +5,93 @@ using System.Threading;
 using System.Collections.Generic;
 
 public class Program {
+	public enum MajorType { MajorSerial, MajorConcurrent, MajorConcurrentPar };
 	public const string binprotFile = "/tmp/binprot";
 	public const string binprotExec = "sgen-grep-binprot";
 
 	public const int numRuns = 1;
 
-	public const int deltaHackConc = 4;
-	public const int deltaHackNoconc = deltaHackConc;
+	public const int deltaHack = 4;
+
+	public static MajorType major1, major2;
+	public static string mono1, mono2;
+	public static string workingDirectory;
+	public static string[] monoArguments;
 
 	private static RunInfoDatabase runInfoDatabase = new RunInfoDatabase ();
 
-#if CONC_VS_CONC
-	public static void ParseArguments (string[] args, out string mono, out string mono2, out string workingDirectory, out string[] monoArguments)
-#else
-	public static void ParseArguments (string[] args, out string mono, out string workingDirectory, out string[] monoArguments)
-#endif
+	public static void PrintUsage ()
+	{
+		Console.WriteLine ("Usage : ./analyzer.exe mode mono1 mono2 working-directory [mono-arg1] [mono-arg2] ...");
+		Console.WriteLine ("		mode	: majors for the two monos [s|c|cp]v[s|c|cp]");
+		Console.WriteLine ("		mono2	: if mono2 is '-' then mono1 is used for both runs");
+	}
+
+	public static bool ParseMajor (string major, ref MajorType major_type)
+	{
+		if (string.Compare (major, "s") == 0)
+			major_type = MajorType.MajorSerial;
+		else if (string.Compare (major, "c") == 0)
+			major_type = MajorType.MajorConcurrent;
+		else if (string.Compare (major, "cp") == 0)
+			major_type = MajorType.MajorConcurrentPar;
+		else
+			return false;
+		return true;
+	}
+
+	public static bool ParseMode (string mode)
+	{
+		string[] majors = mode.Split ('v');
+		if (majors.Length != 2)
+			return false;
+		if (!ParseMajor (majors [0], ref major1))
+			return false;
+		if (!ParseMajor (majors [1], ref major2))
+			return false;
+		return true;
+	}
+
+	public static bool ParseArguments (string[] args)
 	{
 		int arg = 0;
 
-#if CONC_VS_CONC
-		if (args.Length < 3) {
-			throw new ArgumentException ("Usage : ./canalyzer.exe mono1 mono2 working-directory [mono-arg1] [mono-arg2] ...");
-		}
-#else
-		if (args.Length < 2) {
-			throw new ArgumentException ("Usage : ./analyzer.exe mono working-directory [mono-arg1] [mono-arg2] ...");
-		}
-#endif
+		if (args.Length < 4)
+			return false;
 
-#if CONC_VS_CONC
+		if (!ParseMode (args [arg++]))
+			return false;
+		mono1 = args [arg++];
 		mono2 = args [arg++];
-#endif
-		mono = args [arg++];
+		if (string.Compare (mono2, "-") == 0)
+			mono2 = mono1;
 		workingDirectory = args [arg++];
 		monoArguments = args.SubArray<string> (arg);
+		return true;
 	}
 
 	public static void Main (string[] args)
 	{
-		string mono, workingDirectory, target, resultsFolder;
-#if CONC_VS_CONC
-		string mono2;
-#endif
-		string[] monoArguments;
-#if CONC_VS_CONC
-		ParseArguments (args, out mono, out mono2, out workingDirectory, out monoArguments);
-#else
-		ParseArguments (args, out mono, out workingDirectory, out monoArguments);
-#endif
+		string target, resultsFolder;
 
-#if CONC_VS_CONC
-		string name1 = Path.GetFileNameWithoutExtension (mono2);
-		string name2 = Path.GetFileNameWithoutExtension (mono);
-#else
-		string name1 = "noconc";
-		string name2 = "conc";
-#endif
+		if (!ParseArguments (args)) {
+			PrintUsage ();
+			return;
+		}
+
+		string name1 = Path.GetFileNameWithoutExtension (mono1) + "|" + major1;
+		string name2 = Path.GetFileNameWithoutExtension (mono2) + "|" + major2;
 
 		/* Reduce jit compilation delays */
 		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 		for (int i = 0; i < numRuns; i++) {
 			List<double>[] memoryUsage;
-#if CONC_VS_CONC
-			memoryUsage = RunMono (mono2, monoArguments, workingDirectory, true);
-#else
-			memoryUsage = RunMono (mono, monoArguments, workingDirectory, false);
-#endif
-			runInfoDatabase.noconcRuns.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
 
-			memoryUsage = RunMono (mono, monoArguments, workingDirectory, true);
-			runInfoDatabase.concRuns.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
+			memoryUsage = RunMono (mono1, monoArguments, workingDirectory, major1);
+			runInfoDatabase.runs1.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
+
+			memoryUsage = RunMono (mono2, monoArguments, workingDirectory, major2);
+			runInfoDatabase.runs2.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
 		}
 
 		target = Path.GetFileNameWithoutExtension (monoArguments [0]);
@@ -94,7 +111,7 @@ public class Program {
 		Console.WriteLine ("Environment [{0}] = {1}", key, p.StartInfo.EnvironmentVariables [key]);
 	}
 
-	public static List<double>[] RunMono (string mono, string[] args, string workingDirectory, bool concurrent)
+	public static List<double>[] RunMono (string mono, string[] args, string workingDirectory, MajorType major_type)
 	{
 		Process p = new Process ();
 		p.StartInfo.UseShellExecute = false;
@@ -102,15 +119,24 @@ public class Program {
 		p.StartInfo.WorkingDirectory = workingDirectory;
 		p.StartInfo.Arguments = string.Join (" ", args);
 
-		if (concurrent)
-			AddMonoOption (p, "MONO_GC_PARAMS", "major=marksweep-conc");
+		switch (major_type) {
+			case MajorType.MajorSerial:
+				AddMonoOption (p, "MONO_GC_PARAMS", "major=marksweep");
+				break;
+			case MajorType.MajorConcurrent:
+				AddMonoOption (p, "MONO_GC_PARAMS", "major=marksweep-conc");
+				break;
+			case MajorType.MajorConcurrentPar:
+				AddMonoOption (p, "MONO_GC_PARAMS", "major=marksweep-conc-par");
+				break;
+		}
 		AddMonoOption (p, "MONO_GC_DEBUG", "binary-protocol=" + binprotFile);
 
-		Console.WriteLine ("Run {0}, concurrent {1}", mono, concurrent);
+		Console.WriteLine ("Run {0}, Major Type {1}", mono, major_type);
 		Thread.Sleep (1000);
 		p.Start ();
 
-		DateTime startTime = DateTime.Now.AddMilliseconds (concurrent ? deltaHackConc : deltaHackNoconc);
+		DateTime startTime = DateTime.Now.AddMilliseconds (deltaHack);
 
 		List<double> timestamps = new List<double> ();
 		List<double> memoryUsage = new List<double> ();

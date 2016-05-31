@@ -29,8 +29,8 @@ public class Program {
 		string name1 = "noconc";
 		string name2 = "conc";
 
-		runInfoDatabase.noconcRuns.Add (new RunInfo (null, null, ParseBinProtOutput ()));
-		runInfoDatabase.concRuns.Add (new RunInfo (null, null, ParseBinProtOutput ()));
+		runInfoDatabase.runs1.Add (new RunInfo (null, null, ParseBinProtOutput ()));
+		runInfoDatabase.runs2.Add (new RunInfo (null, null, ParseBinProtOutput ()));
 
 		string resultsFolder = Path.Combine ("results", Path.GetFileName (binprotFile));
 
