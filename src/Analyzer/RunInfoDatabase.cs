@@ -8,7 +8,16 @@ using OxyPlot.Axes;
 public class RunInfoDatabase {
 	public List<RunInfo> runs1 = new List<RunInfo>();
 	public List<RunInfo> runs2 = new List<RunInfo>();
-	private bool outliers_removed = false;
+	private bool outliers_removed;
+
+	public RunInfoDatabase (bool remove_outliers)
+	{
+		if (remove_outliers)
+			outliers_removed = false;
+		else
+			outliers_removed = true;
+	}
+
 
 	private void RemoveOutliers (List<RunInfo> runs)
 	{

@@ -11,6 +11,7 @@ public class Program {
 	public const string binprotExec = "sgen-grep-binprot";
 
 	public const int numRuns = 1;
+	public const bool remove_outliers = true;
 
 	public const int deltaHack = 4;
 
@@ -19,7 +20,7 @@ public class Program {
 	public static string workingDirectory;
 	public static string[] monoArguments;
 
-	private static RunInfoDatabase runInfoDatabase = new RunInfoDatabase ();
+	private static RunInfoDatabase runInfoDatabase = new RunInfoDatabase (remove_outliers);
 
 	public static void PrintUsage ()
 	{

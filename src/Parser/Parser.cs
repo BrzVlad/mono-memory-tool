@@ -8,8 +8,7 @@ public class Program {
 	public const string binprotExec = "sgen-grep-binprot";
 	public static string binprotFile;
 
-
-	private static RunInfoDatabase runInfoDatabase = new RunInfoDatabase ();
+	private static RunInfoDatabase runInfoDatabase = new RunInfoDatabase (false);
 
 	public static void ParseArguments (string[] args)
 	{
