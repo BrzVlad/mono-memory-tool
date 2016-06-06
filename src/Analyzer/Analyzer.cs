@@ -86,18 +86,22 @@ public class Program {
 
 		/* Reduce jit compilation delays */
 		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
+
+		target = Path.GetFileNameWithoutExtension (monoArguments [0]);
+		resultsFolder = Path.Combine ("results", target);
+		Directory.CreateDirectory (resultsFolder);
+
 		for (int i = 0; i < numRuns; i++) {
 			List<double>[] memoryUsage;
 
 			memoryUsage = RunMono (mono1, monoArguments, workingDirectory, major1);
 			runInfoDatabase.runs1.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
+			File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name1 + i), true);
 
 			memoryUsage = RunMono (mono2, monoArguments, workingDirectory, major2);
 			runInfoDatabase.runs2.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
+			File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name2 + i), true);
 		}
-
-		target = Path.GetFileNameWithoutExtension (monoArguments [0]);
-		resultsFolder = Path.Combine ("results", target);
 
 		runInfoDatabase.Plot (resultsFolder, name1, name2);
 		runInfoDatabase.OutputStats (resultsFolder, name1, name2);

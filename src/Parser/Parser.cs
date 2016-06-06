@@ -32,6 +32,7 @@ public class Program {
 		runInfoDatabase.runs2.Add (new RunInfo (null, null, ParseBinProtOutput ()));
 
 		string resultsFolder = Path.Combine ("results", Path.GetFileName (binprotFile));
+		Directory.CreateDirectory (resultsFolder);
 
 		runInfoDatabase.OutputStats (resultsFolder, name1, name2);
 	}

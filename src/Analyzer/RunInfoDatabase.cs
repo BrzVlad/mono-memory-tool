@@ -51,7 +51,6 @@ public class RunInfoDatabase {
 		RemoveOutliers ();
 
 		string test_name = Path.GetFileName (resultsFolder);
-		Directory.CreateDirectory (resultsFolder);
 		Utils.AssertEqual<int> (runs1.Count, runs2.Count);
 		for (int i = 0; i < runs1.Count; i++) {
 			string svgFile = Path.Combine (resultsFolder, test_name + i + ".svg");
@@ -85,7 +84,6 @@ public class RunInfoDatabase {
 		OutputStatSet stats1 = GetStats (runs1, name1);
 		OutputStatSet stats2 = GetStats (runs2, name2);
 
-		Directory.CreateDirectory (resultsFolder);
 		string statsFile = Path.Combine (resultsFolder, "stats-overall");
 		using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 			statsWriter.Write (OutputStatSet.ToString (stats1, stats2));
