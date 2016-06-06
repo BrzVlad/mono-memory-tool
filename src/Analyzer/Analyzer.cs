@@ -3,6 +3,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading;
 using System.Collections.Generic;
+using System.Linq;
 
 public class Program {
 	public enum MajorType { MajorSerial, MajorConcurrent, MajorConcurrentPar };
@@ -117,7 +118,7 @@ public class Program {
 		p.StartInfo.UseShellExecute = false;
 		p.StartInfo.FileName = mono;
 		p.StartInfo.WorkingDirectory = workingDirectory;
-		p.StartInfo.Arguments = string.Join (" ", args);
+		p.StartInfo.Arguments = string.Join (" ", args.Select<string, string> (arg => "\"" + arg + "\""));
 
 		switch (major_type) {
 			case MajorType.MajorSerial:
