@@ -189,7 +189,6 @@ public class MajorConcCollection : GCCollection {
 			}
 		}
 
-		Utils.Assert (current == null);
 		return majorConcCollections;
 	}
 }

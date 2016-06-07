@@ -96,7 +96,6 @@ public class MajorSyncCollection : GCCollection {
 			}
 		}
 
-		Utils.Assert (current == null);
 		return majorSyncCollections;
 	}
 }
