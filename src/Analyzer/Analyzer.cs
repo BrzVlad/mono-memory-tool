@@ -74,7 +74,7 @@ public class Program {
 
 	public static void Main (string[] args)
 	{
-		string target, resultsFolder;
+		string target = null, resultsFolder;
 
 		if (!ParseArguments (args)) {
 			PrintUsage ();
@@ -87,7 +87,12 @@ public class Program {
 		/* Reduce jit compilation delays */
 		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 
-		target = Path.GetFileNameWithoutExtension (monoArguments [0]);
+		for (int i = 0; i < monoArguments.Length; i++) {
+			if (!monoArguments [i].StartsWith ("-")) {
+				target = Path.GetFileNameWithoutExtension (monoArguments [i]);
+				break;
+			}
+		}
 		resultsFolder = Path.Combine ("results", target);
 		Directory.CreateDirectory (resultsFolder);
 
