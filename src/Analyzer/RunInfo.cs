@@ -89,7 +89,7 @@ public class RunInfo {
 			majorList = new List<GCCollection> ();
 		}
 
-		resultStat |= new OutputStat ("Time (ms)", Time, CumulationType.AVERAGE);
+		resultStat |= new OutputStat ("Time (s)", Time, CumulationType.AVERAGE);
 		resultStat |= new OutputStat ("Num Minor", nurseryCollections.Count, CumulationType.AVERAGE);
 		resultStat |= new OutputStat ("Num Major", majorList.Count<GCCollection> (), CumulationType.AVERAGE);
 		resultStat |= new OutputStat ("Avg Mem Usage (MB)", ComputeMemoryUsage (), CumulationType.AVERAGE);
