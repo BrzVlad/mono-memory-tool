@@ -39,6 +39,7 @@ public class GCEvent {
 
 	private class GCEventTypeMatcher {
 		private static Regex timestampRegex = new Regex (@"timestamp (\d+)");
+		private static Regex workerRegex = new Regex (@" w(\d+)");
 		private static GCEventTypeMatcher[] matchers = {
 			new GCEventTypeMatcher () { type = GCEventType.NURSERY_START, timestampType = GCEventTimestampType.BEFORE, match = new Regex (@"collection_begin index \d+ generation 0") },
 			new GCEventTypeMatcher () { type = GCEventType.NURSERY_END, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_end \d+ generation 0") },
@@ -88,14 +89,25 @@ public class GCEvent {
 
 			return default(double);
 		}
+
+		public static int MatchWorkerIndex (string line)
+		{
+			if (workerRegex.IsMatch (line)) {
+				Match m = workerRegex.Match (line);
+				return int.Parse (m.Groups [1].Value);
+			}
+			return 0;
+		}
 	}
 
 	public double Timestamp { get; private set; }
 	public GCEventType Type { get; private set; }
+	public int WorkerIndex {get; private set; }
 
 	private static GCEvent Parse (string line, Stack<GCEvent> noTimestamp, ref double timestamp)
 	{
 		double stamp = GCEventTypeMatcher.MatchTimestamp (line);
+		int worker_index = GCEventTypeMatcher.MatchWorkerIndex (line);
 		GCEventTypeMatcher eventTypeMatch = GCEventTypeMatcher.Match (line);
 		GCEvent gcEvent = null;
 
@@ -108,6 +120,7 @@ public class GCEvent {
 		if (eventTypeMatch != null) {
 			gcEvent = new GCEvent ();
 			gcEvent.Type = eventTypeMatch.type;
+			gcEvent.WorkerIndex = worker_index;
 			switch (eventTypeMatch.timestampType) {
 				case GCEventTimestampType.BEFORE:
 					Utils.Assert (timestamp != default(double));
