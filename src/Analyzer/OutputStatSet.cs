@@ -91,7 +91,7 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 
 			if (index2 != -1) {
 				if (sharedStats.Count > 0) {
-					Utils.AssertGreaterThanEqual (index2, sharedStats [sharedStats.Count - 1].Item2);
+					Utils.AssertGreaterThanEqual (index2, sharedStats [sharedStats.Count - 1].Item2, s1, s2);
 				}
 				sharedStats.Add (Tuple.Create<int,int> (index1, index2));
 			}
@@ -136,12 +136,12 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		if (s1.Count == 0) {
 			stat_result.stats = new List<OutputStat> (s2.stats); 
 		} else {
-			Utils.AssertEqual<int> (s1.Count, s2.Count);
+			Utils.AssertEqual<int> (s1.Count, s2.Count, s1, s2);
 
 			for (int i = 0; i < s1.Count; i++) {
 				OutputStat sum_stat = s1 [i] + s2 [i];
 				if (s1.sort_stat == s1 [i]) {
-					Utils.AssertEqualRef (s2.sort_stat, s2 [i]);
+					Utils.AssertEqualRef (s2.sort_stat, s2 [i], s1, s2);
 					stat_result.sort_stat = sum_stat;
 				}
 				stat_result.stats.Add (sum_stat);
@@ -177,7 +177,7 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		if (stat == OutputStat.EmptyStat)
 			return set;
 		int index = set.FindStatIndex (stat);
-		Utils.AssertNotEqual<int> (index, -1);
+		Utils.AssertNotEqual<int> (index, -1, set, stat);
 		set.stats [index] = set.stats [index] + stat;
 		return set;
 	}
@@ -188,7 +188,7 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		if (set == null)
 			set = new OutputStatSet ();
 		int index = set.FindStatIndex (stat);
-		Utils.AssertEqual<int> (index, -1);
+		Utils.AssertEqual<int> (index, -1, set, stat);
 		set.stats.Add (stat);
 		return set;
 	}

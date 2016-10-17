@@ -51,7 +51,7 @@ public class RunInfoDatabase {
 		RemoveOutliers ();
 
 		string test_name = Path.GetFileName (resultsFolder);
-		Utils.AssertEqual<int> (runs1.Count, runs2.Count);
+		Utils.AssertEqual<int> (runs1.Count, runs2.Count, null, null);
 		for (int i = 0; i < runs1.Count; i++) {
 			string svgFile = Path.Combine (resultsFolder, test_name + i + ".svg");
 			PlotModel plotModel  = new PlotModel { Title = test_name };

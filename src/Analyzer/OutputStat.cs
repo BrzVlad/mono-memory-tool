@@ -79,10 +79,10 @@ public class OutputStat {
 
 		o_result.stat_count = o1.stat_count + o2.stat_count;
 
-		Utils.AssertEqual<string> (o1.stat_name, o2.stat_name);
+		Utils.AssertEqual<string> (o1.stat_name, o2.stat_name, o1, o2);
 		o_result.stat_name = o1.stat_name;
 
-		Utils.AssertEqual<int> ((int)o1.cumulation_type, (int)o2.cumulation_type);
+		Utils.AssertEqual<int> ((int)o1.cumulation_type, (int)o2.cumulation_type, o1, o2);
 		o_result.cumulation_type = o1.cumulation_type;
 
 		switch (o_result.cumulation_type) {
