@@ -81,18 +81,27 @@ public class Program {
 			return;
 		}
 
-		string name1 = Path.GetFileNameWithoutExtension (mono1) + "|" + major1;
-		string name2 = Path.GetFileNameWithoutExtension (mono2) + "|" + major2;
+		string exec1 = Path.GetFileNameWithoutExtension (mono1);
+		string exec2 = Path.GetFileNameWithoutExtension (mono2);
+
+		string name1 = exec1 + "|" + major1;
+		string name2 = exec2 + "|" + major2;
 
 		/* Reduce jit compilation delays */
 		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 
-		for (int i = 0; i < monoArguments.Length; i++) {
-			if (!monoArguments [i].StartsWith ("-")) {
-				target = Path.GetFileNameWithoutExtension (monoArguments [i]);
-				break;
+		if (name1.StartsWith ("mono")) {
+			for (int i = 0; i < monoArguments.Length; i++) {
+				if (!monoArguments [i].StartsWith ("-")) {
+					target = Path.GetFileNameWithoutExtension (monoArguments [i]);
+					break;
+				}
 			}
+		} else {
+			/* mono launching is embedded in the executable */
+			target = exec1;
 		}
+
 		resultsFolder = Path.Combine ("results", target);
 		Directory.CreateDirectory (resultsFolder);
 
