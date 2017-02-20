@@ -5,6 +5,10 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 public enum GCEventType {
+	SUSPEND_START,
+	SUSPEND_END,
+	RESUME_START,
+	RESUME_END,
 	NURSERY_START,
 	NURSERY_END,
 	MAJOR_CARDTABLE_SCAN_START,
@@ -41,6 +45,10 @@ public class GCEvent {
 		private static Regex timestampRegex = new Regex (@"timestamp (\d+)");
 		private static Regex workerRegex = new Regex (@" w(\d+)");
 		private static GCEventTypeMatcher[] matchers = {
+			new GCEventTypeMatcher () { type = GCEventType.SUSPEND_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"world_stopping generation \d+ timestamp \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.SUSPEND_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"world_stopped generation \d+ timestamp \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.RESUME_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"world_restarting generation \d+ timestamp \d+") },
+			new GCEventTypeMatcher () { type = GCEventType.RESUME_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"world_restarted generation \d+ timestamp \d+") },
 			new GCEventTypeMatcher () { type = GCEventType.NURSERY_START, timestampType = GCEventTimestampType.BEFORE, match = new Regex (@"collection_begin index \d+ generation 0") },
 			new GCEventTypeMatcher () { type = GCEventType.NURSERY_END, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_end \d+ generation 0") },
 			new GCEventTypeMatcher () { type = GCEventType.MAJOR_START, timestampType = GCEventTimestampType.BEFORE, match = new Regex (@"collection_begin index \d+ generation 1") },
