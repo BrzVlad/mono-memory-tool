@@ -62,12 +62,25 @@ public class OutputStat {
 
 	public override string ToString ()
 	{
-		if (this == EmptyStat || stat_hidden && stat_value == default(double))
+		return ToString (true);
+	}
+
+	public string ToString (bool includeCumulation)
+	{
+		if (this == EmptyStat || stat_hidden && stat_value == default(double)) {
 			return string.Format ("{0,28}  {1,-28}", "", "");
-		else if (cumulation_type == CumulationType.MIN_MAX_AVG)
-			return string.Format ("{0,28}  {1,-28}", Name, string.Format ("{0:0.##} ({1:0.##}-{2:0.##})", Value, min_val, max_val));
-		else
+		} else if (!includeCumulation && (cumulation_type == CumulationType.SUM || cumulation_type == CumulationType.AVERAGE)) {
+			return "";
+		} else if (cumulation_type == CumulationType.MIN_MAX_AVG) {
+			string statVal;
+			if (includeCumulation)
+				statVal = string.Format ("{0:0.##} ({1:0.##}-{2:0.##})", Value, min_val, max_val);
+			else
+				statVal = string.Format ("{0:0.##}", Value);
+			return string.Format ("{0,28}  {1,-28}", Name, statVal);
+		} else {
 			return string.Format ("{0,28}  {1,-28:0.##}", Name, Value);
+		}
 	}
 
 	public static OutputStat operator + (OutputStat o1, OutputStat o2)

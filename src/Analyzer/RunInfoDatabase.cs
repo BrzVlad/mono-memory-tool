@@ -99,7 +99,7 @@ public class RunInfoDatabase {
 				stat1 = s1 [i];
 			if (i < s2.Count)
 				stat2 = s2 [i];
-			statsWriter.WriteLine (OutputStatSet.ToString (stat1, stat2));
+			statsWriter.WriteLine (OutputStatSet.ToString (stat1, stat2, false));
 		}
 	}
 

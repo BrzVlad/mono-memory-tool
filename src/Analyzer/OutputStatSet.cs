@@ -74,7 +74,7 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		return other.SortValue.CompareTo (SortValue);
 	}
 
-	public static string ToString (OutputStatSet s1, OutputStatSet s2) {
+	public static string ToString (OutputStatSet s1, OutputStatSet s2, bool includeCumulation = true) {
 		StringBuilder builder = new StringBuilder ();
 		List<Tuple<int,int>> sharedStats = new List<Tuple<int,int>> ();
 
@@ -114,12 +114,13 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 				string display1 = OutputStat.EmptyStat.ToString ();
 				string display2 = OutputStat.EmptyStat.ToString ();
 				if (start1 + k < end1)
-					display1 = s1 [start1 + k].ToString ();
+					display1 = s1 [start1 + k].ToString (includeCumulation);
 				if (start2 + k < end2)
-					display2 = s2 [start2 + k].ToString ();
+					display2 = s2 [start2 + k].ToString (includeCumulation);
 
 				builder.Append (display1 + display2);
-				builder.AppendLine ();
+				if ((display1 + display2) != "")
+					builder.AppendLine ();
 			}
 		}
 
