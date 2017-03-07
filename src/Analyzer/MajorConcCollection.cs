@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using OxyPlot;
 
-public class WorkerInfo {
+class WorkerInfo {
 	private double worker_finish, worker_finish_before_scan;
 	private double workers_first_scan, worker_last_scan, worker_last_scan_start;
 	private double total_major_scan, total_los_scan;
@@ -53,7 +53,7 @@ public class WorkerInfo {
 
 	public OutputStatSet AddConcurrentStats (OutputStatSet stats, double worker_start, double start_of_end)
 	{
-		if (worker_finish == default(double))
+		if (worker_finish == default(double) || worker_index == 0)
 			return stats;
 
 		double worker_cms_finish = worker_finish_before_scan;
@@ -72,6 +72,9 @@ public class WorkerInfo {
 
 	public OutputStatSet AddForcedFinishStat (OutputStatSet stats, double start_of_finish)
 	{
+		if (worker_index == 0)
+			return stats;
+
 		if (worker_finish_before_scan != default(double))
 			stats |= new OutputStat (string.Format ("Forced finish {0,2} (ms)", worker_index), (worker_finish_before_scan - start_of_finish) * 1000, CumulationType.MIN_MAX_AVG);
 		else
@@ -83,6 +86,10 @@ public class WorkerInfo {
 	{
 		stats |= new OutputStat (string.Format ("Mod Union Major Scan {0,2} (ms)", worker_index), total_major_scan * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat (string.Format ("Mod Union LOS Scan {0,2} (ms)", worker_index), total_los_scan * 1000, CumulationType.MIN_MAX_AVG);
+
+		if (worker_index == 0)
+			return stats;
+
 		if (worker_last_scan != default(double))
 			stats |= new OutputStat (string.Format ("Major Finish Par {0,2} (ms)", worker_index), (worker_finish - worker_last_scan) * 1000, CumulationType.MIN_MAX_AVG);
 		else
@@ -92,7 +99,7 @@ public class WorkerInfo {
 
 }
 
-public class WorkerStatManager {
+class WorkerStatManager {
 	private const int MAX_NUM_WORKERS = 16;
 	private WorkerInfo[] worker_infos_conc = new WorkerInfo [MAX_NUM_WORKERS];
 	private WorkerInfo[] worker_infos_finish = new WorkerInfo [MAX_NUM_WORKERS];
@@ -163,7 +170,7 @@ public class MajorConcCollection : GCCollection {
 	private int num_minor;
 	private double evacuated_block_sizes;
 	private double concurrent_sweep_end, next_nursery_start;
-	private WorkerStatManager worker_manager;
+	private WorkerStatManager worker_manager = new WorkerStatManager ();
 
 	public MajorConcCollection () : base (true) { }
 
@@ -233,7 +240,6 @@ public class MajorConcCollection : GCCollection {
 				 * start entry.
 				 */
 				current.end_of_start_timestamp = last_nursery_end;
-				current.worker_manager = new WorkerStatManager ();
 				break;
 			case GCEventType.EVACUATING_BLOCKS:
 				if (current != null)
