@@ -51,7 +51,11 @@ public class RunInfoDatabase {
 		RemoveOutliers ();
 
 		string test_name = Path.GetFileName (resultsFolder);
-		Utils.AssertEqual<int> (runs1.Count, runs2.Count, null, null);
+		bool plot1 = runs1.Count != 0;
+		bool plot2 = runs2.Count != 0;
+
+		if (plot1 && plot2)
+			Utils.AssertEqual<int> (runs1.Count, runs2.Count, null, null);
 		for (int i = 0; i < runs1.Count; i++) {
 			string svgFile = Path.Combine (resultsFolder, test_name + i + ".svg");
 			PlotModel plotModel  = new PlotModel { Title = test_name };
@@ -61,8 +65,10 @@ public class RunInfoDatabase {
 			plotModel.LegendBackground = OxyColors.LightGray;
 			plotModel.LegendBorder = OxyColors.Black;
 
-			runs1 [i].Plot (plotModel, name1);
-			runs2 [i].Plot (plotModel, name2);
+			if (plot1)
+				runs1 [i].Plot (plotModel, name1);
+			if (plot2)
+				runs2 [i].Plot (plotModel, name2);
 
 			using (FileStream stream = new FileStream (svgFile, FileMode.Create)) {
 				SvgExporter.Export (plotModel, stream, 1920, 1080, true);
@@ -92,12 +98,12 @@ public class RunInfoDatabase {
 
 	private void OutputStatListComparison (StreamWriter statsWriter, List<OutputStatSet> s1, List<OutputStatSet> s2)
 	{
-		for (int i = 0; i < Math.Max (s1.Count, s2.Count); i++) {
+		for (int i = 0; i < Math.Max (s1.Count, s2 != null ? s2.Count : 0); i++) {
 			OutputStatSet stat1 = OutputStatSet.EmptyStatSet;
 			OutputStatSet stat2 = OutputStatSet.EmptyStatSet;
 			if (i < s1.Count)
 				stat1 = s1 [i];
-			if (i < s2.Count)
+			if (s2 != null && i < s2.Count)
 				stat2 = s2 [i];
 			statsWriter.WriteLine (OutputStatSet.ToString (stat1, stat2, false));
 		}
@@ -105,16 +111,17 @@ public class RunInfoDatabase {
 
 	private void OutputPerRunStats (string resultsFolder, string noconc, string conc)
 	{
+		bool only1 = runs2.Count == 0;
 		for (int i = 0; i < runs1.Count; i++) {
 			string statsFile = Path.Combine (resultsFolder, "majors" + i);
 			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 				statsWriter.WriteLine ("Majors");
-				OutputStatListComparison (statsWriter, runs1 [i].GetTopMajorStats (10), runs2 [i].GetTopMajorStats (10));
+				OutputStatListComparison (statsWriter, runs1 [i].GetTopMajorStats (10), only1 ? null : runs2 [i].GetTopMajorStats (10));
 			}
 			statsFile = Path.Combine (resultsFolder, "minors" + i);
 			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
 				statsWriter.WriteLine ("Minors");
-				OutputStatListComparison (statsWriter, runs1 [i].GetTopMinorStats (10), runs2 [i].GetTopMinorStats (10));
+				OutputStatListComparison (statsWriter, runs1 [i].GetTopMinorStats (10), only1 ? null : runs2 [i].GetTopMinorStats (10));
 			}
 		}
 	}

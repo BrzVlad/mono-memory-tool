@@ -87,6 +87,8 @@ public class Program {
 		string name1 = exec1 + "|" + major1;
 		string name2 = exec2 + "|" + major2;
 
+		bool no_comparison = name1 == name2;
+
 		/* Reduce jit compilation delays */
 		Console.WriteLine (DateTime.Now.AddMilliseconds (100));
 
@@ -112,13 +114,15 @@ public class Program {
 			runInfoDatabase.runs1.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
 			File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name1 + i), true);
 
-			memoryUsage = RunMono (mono2, monoArguments, workingDirectory, major2);
-			runInfoDatabase.runs2.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
-			File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name2 + i), true);
+			if (!no_comparison) {
+				memoryUsage = RunMono (mono2, monoArguments, workingDirectory, major2);
+				runInfoDatabase.runs2.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
+				File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name2 + i), true);
+			}
 		}
 
-		runInfoDatabase.Plot (resultsFolder, name1, name2);
-		runInfoDatabase.OutputStats (resultsFolder, name1, name2);
+		runInfoDatabase.Plot (resultsFolder, name1, no_comparison ? "" : name2);
+		runInfoDatabase.OutputStats (resultsFolder, name1, no_comparison ? "" : name2);
 	}
 
 	private static void AddMonoOption (Process p, string key, string val)
