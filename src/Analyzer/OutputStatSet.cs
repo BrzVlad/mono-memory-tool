@@ -137,7 +137,9 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		if (s1.Count == 0) {
 			stat_result.stats = new List<OutputStat> (s2.stats); 
 		} else {
-			Utils.AssertEqual<int> (s1.Count, s2.Count, s1, s2);
+			/* FIXME Figure out a way to combine par + nopar stat sets */
+			if (s1.Count != s2.Count)
+				return s1;
 
 			for (int i = 0; i < s1.Count; i++) {
 				OutputStat sum_stat = s1 [i] + s2 [i];
