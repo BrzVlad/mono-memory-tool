@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using OxyPlot;
 
 public class MajorSyncCollection : GCCollection {
-	private double finish_gray_stack_start, finish_gray_stack_end;
+	private double finish_gray_stack;
 	private double evacuated_block_sizes;
 	private double concurrent_sweep_end, next_nursery_start;
 
@@ -19,7 +19,7 @@ public class MajorSyncCollection : GCCollection {
 		stats |= new OutputStat ("Total Major Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.SUM);
 		stats |= new OutputStat ("Evacuated block sizes", evacuated_block_sizes, CumulationType.MIN_MAX_AVG);
 		stats ^= new OutputStat ("Major Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat ("Major Finish GS (ms)", (finish_gray_stack_end - finish_gray_stack_start) * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Major Finish GS (ms)", finish_gray_stack * 1000, CumulationType.MIN_MAX_AVG);
 		if (concurrent_sweep_end > end_timestamp) {
 			if (next_nursery_start != default(double) && concurrent_sweep_end > next_nursery_start) {
 				Utils.Assert (next_nursery_start > end_timestamp);
@@ -73,13 +73,9 @@ public class MajorSyncCollection : GCCollection {
 			case GCEventType.CONCURRENT_FINISH:
 				current = null;
 				break;
-			case GCEventType.FINISH_GRAY_STACK_START:
+			case GCEventType.COLLECTION_END_STATS:
 				if (current != null)
-					current.finish_gray_stack_start = gcEvent.Timestamp;
-				break;
-			case GCEventType.FINISH_GRAY_STACK_END:
-				if (current != null)
-					current.finish_gray_stack_end = gcEvent.Timestamp;
+					current.finish_gray_stack = ((double)long.Parse (gcEvent.Values [2])) / 10000000;
 				break;
 			case GCEventType.EVACUATING_BLOCKS:
 				if (current != null)

@@ -2,11 +2,9 @@ using System.Collections.Generic;
 using OxyPlot;
 
 class WorkerInfoNursery {
-	private double worker_finish;
-	private double worker_last_scan, worker_last_scan_start;
-	private double total_major_scan, total_los_scan;
+	private double total_major_scan, total_los_scan, total_work_time;
 
-	/* If index is 0, this is actually the gc thread */
+	/* Index should be > 0, which is actually the gc thread */
 	private int worker_index;
 
 	public WorkerInfoNursery (int worker_index)
@@ -16,22 +14,11 @@ class WorkerInfoNursery {
 
 	public void HandleEvent (GCEvent gcEvent) {
 		switch (gcEvent.Type) {
-		case GCEventType.MAJOR_CARDTABLE_SCAN_START:
-			worker_last_scan_start = gcEvent.Timestamp;
-			break;
-		case GCEventType.MAJOR_CARDTABLE_SCAN_END:
-			total_major_scan += gcEvent.Timestamp - worker_last_scan_start;
-			worker_last_scan = gcEvent.Timestamp;
-			break;
-		case GCEventType.LOS_CARDTABLE_SCAN_START:
-			worker_last_scan_start = gcEvent.Timestamp;
-			break;
-		case GCEventType.LOS_CARDTABLE_SCAN_END:
-			total_los_scan += gcEvent.Timestamp - worker_last_scan_start;
-			worker_last_scan = gcEvent.Timestamp;
-			break;
-		case GCEventType.WORKER_FINISH:
-			worker_finish = gcEvent.Timestamp;
+		case GCEventType.MINOR_WORKER_FINISH_STATS:
+			Utils.Assert (worker_index == int.Parse (gcEvent.Values [0]));
+			total_major_scan = ((double)long.Parse (gcEvent.Values [1])) / 10000000;
+			total_los_scan = ((double)long.Parse (gcEvent.Values [2])) / 10000000;
+			total_work_time = ((double)long.Parse (gcEvent.Values [3])) / 10000000;
 			break;
 		}
 	}
@@ -40,14 +27,7 @@ class WorkerInfoNursery {
 	{
 		stats |= new OutputStat (string.Format ("Major Scan {0,2} (ms)", worker_index), total_major_scan * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat (string.Format ("LOS Scan {0,2} (ms)", worker_index), total_los_scan * 1000, CumulationType.MIN_MAX_AVG);
-
-		if (worker_index == 0)
-			return stats;
-
-		if (worker_last_scan != default(double))
-			stats |= new OutputStat (string.Format ("Finish Par {0,2} (ms)", worker_index), (worker_finish - worker_last_scan) * 1000, CumulationType.MIN_MAX_AVG);
-		else
-			stats |= new OutputStat (string.Format ("Finish Par {0,2} (ms)", worker_index), 0, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Finish Par {0,2} (ms)", worker_index), (total_work_time - total_major_scan - total_los_scan) * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 
@@ -59,15 +39,18 @@ class WorkerStatManagerNursery {
 
 	public void HandleEvent (GCEvent gcEvent)
 	{
-		if (worker_infos [gcEvent.WorkerIndex] == null)
-			worker_infos [gcEvent.WorkerIndex] = new WorkerInfoNursery (gcEvent.WorkerIndex);
+		int worker_index;
+		Utils.Assert (gcEvent.Type == GCEventType.MINOR_WORKER_FINISH_STATS);
+		worker_index = int.Parse (gcEvent.Values [0]);
+		if (worker_infos [worker_index] == null)
+			worker_infos [worker_index] = new WorkerInfoNursery (worker_index);
 
-		worker_infos [gcEvent.WorkerIndex].HandleEvent (gcEvent);
+		worker_infos [worker_index].HandleEvent (gcEvent);
 	}
 
 	public OutputStatSet AddFinishStats (OutputStatSet stats)
 	{
-		for (int i = 0; i < MAX_NUM_WORKERS; i++) {
+		for (int i = 1; i < MAX_NUM_WORKERS; i++) {
 			if (worker_infos [i] != null)
 				stats = worker_infos [i].AddFinishStats (stats);
 		}
@@ -76,7 +59,7 @@ class WorkerStatManagerNursery {
 }
 
 public class NurseryCollection : GCCollection {
-	private double finish_gray_stack_start, finish_gray_stack_end;
+	private double finish_gray_stack, major_scan, los_scan;
 	private double suspend_start, suspend_end, resume_start, resume_end;
 	private WorkerStatManagerNursery worker_manager = new WorkerStatManagerNursery ();
 
@@ -97,7 +80,9 @@ public class NurseryCollection : GCCollection {
 		stats |= new OutputStat ("Resume World (ms)", (resume_end - resume_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats ^= new OutputStat ("Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		stats = worker_manager.AddFinishStats (stats);
-		stats |= new OutputStat ("Minor Finish GS (ms)", (finish_gray_stack_end - finish_gray_stack_start) * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Major Scan (ms)", major_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("LOS Scan (ms)", los_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Minor Finish GS (ms)", finish_gray_stack * 1000, CumulationType.MIN_MAX_AVG);
 		return stats | base.GetStats ();
 	}
 
@@ -129,19 +114,15 @@ public class NurseryCollection : GCCollection {
 			case GCEventType.NURSERY_START:
 				current.start_timestamp = gcEvent.Timestamp;
 				break;
-			case GCEventType.MAJOR_CARDTABLE_SCAN_START:
-			case GCEventType.MAJOR_CARDTABLE_SCAN_END:
-			case GCEventType.LOS_CARDTABLE_SCAN_START:
-			case GCEventType.LOS_CARDTABLE_SCAN_END:
-			case GCEventType.WORKER_FINISH:
-				if (current != null)
-                                        current.worker_manager.HandleEvent (gcEvent);
+			case GCEventType.MINOR_WORKER_FINISH_STATS:
+				current.worker_manager.HandleEvent (gcEvent);
 				break;
-			case GCEventType.FINISH_GRAY_STACK_START:
-				current.finish_gray_stack_start = gcEvent.Timestamp;
-				break;
-			case GCEventType.FINISH_GRAY_STACK_END:
-				current.finish_gray_stack_end = gcEvent.Timestamp;
+			case GCEventType.COLLECTION_END_STATS:
+				if (current != null) {
+					current.major_scan = ((double)long.Parse (gcEvent.Values [0])) / 10000000;
+					current.los_scan = ((double)long.Parse (gcEvent.Values [1])) / 10000000;
+					current.finish_gray_stack = ((double)long.Parse (gcEvent.Values [2])) / 10000000;
+				}
 				break;
 			case GCEventType.NURSERY_END:
 				current.end_timestamp = gcEvent.Timestamp;

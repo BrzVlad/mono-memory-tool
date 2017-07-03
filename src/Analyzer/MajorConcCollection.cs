@@ -3,97 +3,95 @@ using System.Collections.Generic;
 using OxyPlot;
 
 class WorkerInfo {
-	private double worker_finish, worker_finish_before_scan;
-	private double workers_first_scan, worker_last_scan, worker_last_scan_start;
-	private double total_major_scan, total_los_scan;
+	private class WorkerFinishStat {
+		public double major_scan, los_scan, work_time;
+		public double timestamp;
 
-	/* If index is 0, this is actually the gc thread */
+		public double DrainWork {
+			get {
+				return work_time - los_scan - major_scan;
+			}
+		}
+	}
+
+	private List<WorkerFinishStat> finish_stats = new List<WorkerFinishStat> ();
+	private int forced_index = -1;
+
+	/* Index should be > 0, which is actually the gc thread */
 	private int worker_index;
+
+	public bool IsForcedFinish {
+		get {
+			return forced_index != -1;
+		}
+	}
 
 	public WorkerInfo (int worker_index)
 	{
 		this.worker_index = worker_index;
 	}
 
-	public void ReportScan (GCEvent gcEvent, bool concurrent)
-	{
-		if (workers_first_scan == default(double)) {
-			workers_first_scan = gcEvent.Timestamp;
-			if (gcEvent.WorkerIndex == worker_index && concurrent) {
-				worker_finish = workers_first_scan;
-				worker_finish_before_scan = workers_first_scan;
-			}
-		}
-	}
-
 	public void HandleEvent (GCEvent gcEvent) {
 		switch (gcEvent.Type) {
-		case GCEventType.MAJOR_MOD_UNION_SCAN_START:
-			worker_last_scan_start = gcEvent.Timestamp;
-			break;
-		case GCEventType.MAJOR_MOD_UNION_SCAN_END:
-			total_major_scan += gcEvent.Timestamp - worker_last_scan_start;
-			worker_last_scan = gcEvent.Timestamp;
-			break;
-		case GCEventType.LOS_MOD_UNION_SCAN_START:
-			worker_last_scan_start = gcEvent.Timestamp;
-			break;
-		case GCEventType.LOS_MOD_UNION_SCAN_END:
-			total_los_scan += gcEvent.Timestamp - worker_last_scan_start;
-			worker_last_scan = gcEvent.Timestamp;
-			break;
-		case GCEventType.WORKER_FINISH:
-		case GCEventType.WORKER_FINISH_FORCED:
-			worker_finish = gcEvent.Timestamp;
-			if (workers_first_scan == default(double))
-				worker_finish_before_scan = worker_finish;
+		case GCEventType.MAJOR_WORKER_FINISH_STATS:
+		case GCEventType.MAJOR_WORKER_FINISH_FORCED_STATS:
+			Utils.Assert (worker_index == int.Parse (gcEvent.Values [0]));
+			finish_stats.Add (new WorkerFinishStat {
+				major_scan = ((double)long.Parse (gcEvent.Values [1])) / 10000000,
+				los_scan = ((double)long.Parse (gcEvent.Values [2])) / 10000000,
+				work_time = ((double)long.Parse (gcEvent.Values [3])) / 10000000,
+				timestamp = gcEvent.Timestamp
+				});
+			if (gcEvent.Type == GCEventType.MAJOR_WORKER_FINISH_FORCED_STATS)
+				forced_index = finish_stats.Count - 1;
 			break;
 		}
 	}
 
-	public OutputStatSet AddConcurrentStats (OutputStatSet stats, double worker_start, double start_of_end)
+	private int ComputeLastConcurrentIndex (double start_of_end)
 	{
-		if (worker_finish == default(double) || worker_index == 0)
+		int last_concurrent_index;
+
+		if (forced_index != -1) {
+			last_concurrent_index = forced_index;
+		} else {
+			last_concurrent_index = -1;
+			foreach (WorkerFinishStat stat in finish_stats) {
+				if (stat.timestamp >= start_of_end)
+					break;
+				last_concurrent_index++;
+			}
+		}
+
+		return last_concurrent_index;
+	}
+
+	public OutputStatSet AddConcurrentStats (OutputStatSet stats, double start_of_end)
+	{
+		int last_concurrent_index = ComputeLastConcurrentIndex (start_of_end);
+
+		/* Return if worker not part of concurrent phase */
+		if (last_concurrent_index == -1)
 			return stats;
 
-		double worker_cms_finish = worker_finish_before_scan;
-		if (worker_finish == worker_cms_finish || worker_finish > start_of_end)
-			worker_finish = start_of_end;
-
-		stats |= new OutputStat (string.Format ("Conc M&S {0,2} (ms)", worker_index), (worker_cms_finish - worker_start) * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("Major Mod Preclean {0,2} (ms)", worker_index), total_major_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("LOS Mod Preclean {0,2} (ms)", worker_index), total_los_scan * 1000, CumulationType.MIN_MAX_AVG);
-		if (worker_last_scan != default(double))
-			stats |= new OutputStat (string.Format ("Finish conc M&S {0,2} (ms)", worker_index), (worker_finish - worker_last_scan) * 1000, CumulationType.MIN_MAX_AVG);
-		else
-			stats |= new OutputStat (string.Format ("Finish conc M&S {0,2} (ms)", worker_index), 0, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Conc M&S {0,2} (ms)", worker_index), finish_stats [0].work_time * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Major Mod Preclean {0,2} (ms)", worker_index), finish_stats [last_concurrent_index].major_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("LOS Mod Preclean {0,2} (ms)", worker_index), finish_stats [last_concurrent_index].los_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Finish conc M&S {0,2} (ms)", worker_index), (finish_stats [last_concurrent_index].DrainWork - finish_stats [0].work_time) * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 
-	public OutputStatSet AddForcedFinishStat (OutputStatSet stats, double start_of_finish)
+	public OutputStatSet AddFinishStats (OutputStatSet stats, double start_of_end)
 	{
-		if (worker_index == 0)
+		int last_concurrent_index = ComputeLastConcurrentIndex (start_of_end);
+
+		/* Return if worker not part of finishing pause */
+		if (last_concurrent_index == finish_stats.Count - 1)
 			return stats;
 
-		if (worker_finish_before_scan != default(double))
-			stats |= new OutputStat (string.Format ("Forced finish {0,2} (ms)", worker_index), (worker_finish_before_scan - start_of_finish) * 1000, CumulationType.MIN_MAX_AVG);
-		else
-			stats |= new OutputStat (string.Format ("Forced finish {0,2} (ms)", worker_index), 0, CumulationType.MIN_MAX_AVG);
-		return stats;
-	}
-
-	public OutputStatSet AddFinishStats (OutputStatSet stats)
-	{
-		stats |= new OutputStat (string.Format ("Mod Union Major Scan {0,2} (ms)", worker_index), total_major_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("Mod Union LOS Scan {0,2} (ms)", worker_index), total_los_scan * 1000, CumulationType.MIN_MAX_AVG);
-
-		if (worker_index == 0)
-			return stats;
-
-		if (worker_last_scan != default(double))
-			stats |= new OutputStat (string.Format ("Major Finish Par {0,2} (ms)", worker_index), (worker_finish - worker_last_scan) * 1000, CumulationType.MIN_MAX_AVG);
-		else
-			stats |= new OutputStat (string.Format ("Major Finish Par {0,2} (ms)", worker_index), 0, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Mod Union Major Scan {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].major_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Mod Union LOS Scan {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].los_scan, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Major Finish Par {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].DrainWork * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 
@@ -101,63 +99,41 @@ class WorkerInfo {
 
 class WorkerStatManager {
 	private const int MAX_NUM_WORKERS = 16;
-	private WorkerInfo[] worker_infos_conc = new WorkerInfo [MAX_NUM_WORKERS];
-	private WorkerInfo[] worker_infos_finish = new WorkerInfo [MAX_NUM_WORKERS];
-	private WorkerInfo[] worker_infos_current;
-
-	public WorkerStatManager ()
-	{
-		worker_infos_current = worker_infos_conc;
-	}
+	private WorkerInfo[] worker_infos = new WorkerInfo [MAX_NUM_WORKERS];
 
 	public void HandleEvent (GCEvent gcEvent, double start_timestamp_finish) {
-		if (start_timestamp_finish != default(double) &&
-				worker_infos_current == worker_infos_conc) {
-			worker_infos_current = worker_infos_finish;
-		}
 
-		if (worker_infos_current [gcEvent.WorkerIndex] == null) {
-			worker_infos_current [gcEvent.WorkerIndex] = new WorkerInfo (gcEvent.WorkerIndex);
-			if (gcEvent.Type == GCEventType.WORKER_FINISH_FORCED && worker_infos_conc [gcEvent.WorkerIndex] == null) {
-				worker_infos_conc [gcEvent.WorkerIndex] = new WorkerInfo (gcEvent.WorkerIndex);
-				worker_infos_conc [gcEvent.WorkerIndex].HandleEvent (gcEvent);
-			}
-		}
+		if (worker_infos [gcEvent.WorkerIndex] == null)
+			worker_infos [gcEvent.WorkerIndex] = new WorkerInfo (gcEvent.WorkerIndex);
 
-		if (gcEvent.Type == GCEventType.MAJOR_MOD_UNION_SCAN_START ||
-				gcEvent.Type == GCEventType.LOS_MOD_UNION_SCAN_START) {
+		worker_infos [gcEvent.WorkerIndex].HandleEvent (gcEvent);
+	}
+
+	public int NumForced {
+		get {
+			int num_forced = 0;
 			for (int i = 0; i < MAX_NUM_WORKERS; i++) {
-				if (worker_infos_current [i] != null)
-					worker_infos_current [i].ReportScan (gcEvent, worker_infos_current == worker_infos_conc);
+				if (worker_infos [i] != null && worker_infos [i].IsForcedFinish)
+					num_forced++;
 			}
+			return num_forced;
 		}
-
-		worker_infos_current [gcEvent.WorkerIndex].HandleEvent (gcEvent);
 	}
 
-	public OutputStatSet AddConcurrentStats (OutputStatSet stats, double worker_start, double start_of_end)
+	public OutputStatSet AddConcurrentStats (OutputStatSet stats, double start_of_end)
 	{
 		for (int i = 0; i < MAX_NUM_WORKERS; i++) {
-			if (worker_infos_conc [i] != null)
-				stats = worker_infos_conc [i].AddConcurrentStats (stats, worker_start, start_of_end);
-		}
-		return stats;
-	}
-
-	public OutputStatSet AddForcedFinishStat (OutputStatSet stats, double start_of_finish)
-	{
-		for (int i = 0; i < MAX_NUM_WORKERS; i++) {
-			if (worker_infos_finish [i] != null)
-				stats = worker_infos_finish [i].AddForcedFinishStat (stats, start_of_finish);
+			if (worker_infos [i] != null)
+				stats = worker_infos [i].AddConcurrentStats (stats, start_of_end);
 		}
 		return stats;
 	}
 
-	public OutputStatSet AddFinishStats (OutputStatSet stats)
+	public OutputStatSet AddFinishStats (OutputStatSet stats, double start_of_end)
 	{
 		for (int i = 0; i < MAX_NUM_WORKERS; i++) {
-			if (worker_infos_finish [i] != null)
-				stats = worker_infos_finish [i].AddFinishStats (stats);
+			if (worker_infos [i] != null)
+				stats = worker_infos [i].AddFinishStats (stats, start_of_end);
 		}
 		return stats;
 	}
@@ -166,7 +142,7 @@ class WorkerStatManager {
 public class MajorConcCollection : GCCollection {
 
 	private double end_of_start_timestamp, start_of_end_timestamp;
-	private double finish_gray_stack_start, finish_gray_stack_end;
+	private double finish_gray_stack, major_scan, los_scan;
 	private int num_minor;
 	private double evacuated_block_sizes;
 	private double concurrent_sweep_end, next_nursery_start;
@@ -188,11 +164,13 @@ public class MajorConcCollection : GCCollection {
 		stats |= new OutputStat ("Evacuated block sizes", evacuated_block_sizes, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Start Pause (ms)", (end_of_start_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Minor while Conc", num_minor, CumulationType.MIN_MAX_AVG);
-		stats = worker_manager.AddConcurrentStats (stats, end_of_start_timestamp, start_of_end_timestamp);
+		stats = worker_manager.AddConcurrentStats (stats, start_of_end_timestamp);
 		stats ^= new OutputStat ("Major Pause (ms)", (end_timestamp - start_of_end_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
-		stats = worker_manager.AddForcedFinishStat (stats, start_of_end_timestamp);
-		stats = worker_manager.AddFinishStats (stats);
-		stats |= new OutputStat ("Major Finish GS (ms)", (finish_gray_stack_end - finish_gray_stack_start) * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Forced Finish", worker_manager.NumForced, CumulationType.MIN_MAX_AVG);
+		stats = worker_manager.AddFinishStats (stats, start_of_end_timestamp);
+		stats |= new OutputStat ("Mod Union Major Scan (ms)", major_scan * 1000, CumulationType.MIN_MAX_AVG);
+                stats |= new OutputStat ("Mod Union LOS Scan (ms)", los_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Major Finish GS (ms)", finish_gray_stack * 1000, CumulationType.MIN_MAX_AVG);
 		if (concurrent_sweep_end > end_timestamp) {
 			if (next_nursery_start != default(double) && concurrent_sweep_end > next_nursery_start) {
 				Utils.Assert (next_nursery_start > end_timestamp);
@@ -245,26 +223,17 @@ public class MajorConcCollection : GCCollection {
 				if (current != null)
 					current.evacuated_block_sizes += 1;
 				break;
-			case GCEventType.MAJOR_MOD_UNION_SCAN_START:
-			case GCEventType.MAJOR_MOD_UNION_SCAN_END:
-			case GCEventType.LOS_MOD_UNION_SCAN_START:
-			case GCEventType.LOS_MOD_UNION_SCAN_END:
-			case GCEventType.WORKER_FINISH_FORCED:
-			case GCEventType.WORKER_FINISH:
+			case GCEventType.MAJOR_WORKER_FINISH_STATS:
+			case GCEventType.MAJOR_WORKER_FINISH_FORCED_STATS:
 				if (current != null)
 					current.worker_manager.HandleEvent (gcEvent, current.start_of_end_timestamp);
 				break;
-			case GCEventType.FINISH_GRAY_STACK_START:
-				/*
-				 * The finish gray stack for the nursery collections will be
-				 * overwritten by the one for the finishing pause
-				 */
-				if (current != null)
-					current.finish_gray_stack_start = gcEvent.Timestamp;
-				break;
-			case GCEventType.FINISH_GRAY_STACK_END:
-				if (current != null)
-					current.finish_gray_stack_end = gcEvent.Timestamp;
+			case GCEventType.COLLECTION_END_STATS:
+				if (current != null && current.start_of_end_timestamp != default (double)) {
+					current.major_scan = ((double)long.Parse (gcEvent.Values [0])) / 10000000;
+					current.los_scan = ((double)long.Parse (gcEvent.Values [1])) / 10000000;
+					current.finish_gray_stack = ((double)long.Parse (gcEvent.Values [2])) / 10000000;
+				}
 				break;
 			case GCEventType.CONCURRENT_FINISH:
 				if (current != null) {

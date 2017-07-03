@@ -3,6 +3,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 public enum GCEventType {
 	SUSPEND_START,
@@ -11,21 +12,15 @@ public enum GCEventType {
 	RESUME_END,
 	NURSERY_START,
 	NURSERY_END,
-	MAJOR_CARDTABLE_SCAN_START,
-	MAJOR_CARDTABLE_SCAN_END,
-	LOS_CARDTABLE_SCAN_START,
-	LOS_CARDTABLE_SCAN_END,
 	MAJOR_START,
 	MAJOR_END,
-	MAJOR_MOD_UNION_SCAN_START,
-	MAJOR_MOD_UNION_SCAN_END,
-	LOS_MOD_UNION_SCAN_START,
-	LOS_MOD_UNION_SCAN_END,
 	CONCURRENT_START,
 	CONCURRENT_FINISH,
 	MAJOR_REQUEST_FORCE,
-	WORKER_FINISH,
-	WORKER_FINISH_FORCED,
+	MINOR_WORKER_FINISH_STATS,
+	MAJOR_WORKER_FINISH_STATS,
+	MAJOR_WORKER_FINISH_FORCED_STATS,
+	COLLECTION_END_STATS,
 	EVACUATING_BLOCKS,
 	FINISH_GRAY_STACK_START,
 	FINISH_GRAY_STACK_END,
@@ -56,16 +51,10 @@ public class GCEvent {
 			new GCEventTypeMatcher () { type = GCEventType.CONCURRENT_START, timestampType = GCEventTimestampType.BEFORE, match = new Regex ("concurrent_start") },
 			new GCEventTypeMatcher () { type = GCEventType.CONCURRENT_FINISH, timestampType = GCEventTimestampType.BEFORE, match = new Regex ("concurrent_finish") },
 			new GCEventTypeMatcher () { type = GCEventType.MAJOR_REQUEST_FORCE, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_requested generation 1 requested_size \d+ force true") },
-			new GCEventTypeMatcher () { type = GCEventType.MAJOR_CARDTABLE_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_start timestamp \d+ mod_union false") },
-			new GCEventTypeMatcher () { type = GCEventType.MAJOR_CARDTABLE_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_end timestamp \d+ mod_union false") },
-			new GCEventTypeMatcher () { type = GCEventType.LOS_CARDTABLE_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_start timestamp \d+ mod_union false") },
-			new GCEventTypeMatcher () { type = GCEventType.LOS_CARDTABLE_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_end timestamp \d+ mod_union false") },
-			new GCEventTypeMatcher () { type = GCEventType.MAJOR_MOD_UNION_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_start timestamp \d+ mod_union true") },
-			new GCEventTypeMatcher () { type = GCEventType.MAJOR_MOD_UNION_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"major_card_table_scan_end timestamp \d+ mod_union true") },
-			new GCEventTypeMatcher () { type = GCEventType.LOS_MOD_UNION_SCAN_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_start timestamp \d+ mod_union true") },
-			new GCEventTypeMatcher () { type = GCEventType.LOS_MOD_UNION_SCAN_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"los_card_table_scan_end timestamp \d+ mod_union true") },
-			new GCEventTypeMatcher () { type = GCEventType.WORKER_FINISH, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"worker_finish timestamp \d+ forced false") },
-			new GCEventTypeMatcher () { type = GCEventType.WORKER_FINISH_FORCED, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"worker_finish timestamp \d+ forced true") },
+			new GCEventTypeMatcher () { type = GCEventType.MINOR_WORKER_FINISH_STATS, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"worker_finish_stats worker_index (\d+) generation 0 forced false major_scan (\d+) los_scan (\d+) work_time (\d+)") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_WORKER_FINISH_STATS, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"worker_finish_stats worker_index (\d+) generation 1 forced false major_scan (\d+) los_scan (\d+) work_time (\d+)") },
+			new GCEventTypeMatcher () { type = GCEventType.MAJOR_WORKER_FINISH_FORCED_STATS, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"worker_finish_stats worker_index (\d+) generation 1 forced true major_scan (\d+) los_scan (\d+) work_time (\d+)") },
+			new GCEventTypeMatcher () { type = GCEventType.COLLECTION_END_STATS, timestampType = GCEventTimestampType.AFTER, match = new Regex (@"collection_end_stats major_scan (\d+) los_scan (\d+) finish_stack (\d+)") },
 			new GCEventTypeMatcher () { type = GCEventType.EVACUATING_BLOCKS, timestampType = GCEventTimestampType.BEFORE, match = new Regex (@"evacuating_blocks block_size \d+") },
 			new GCEventTypeMatcher () { type = GCEventType.FINISH_GRAY_STACK_START, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"finish_gray_stack_start timestamp \d+ generation \d+") },
 			new GCEventTypeMatcher () { type = GCEventType.FINISH_GRAY_STACK_END, timestampType = GCEventTimestampType.INCLUDED, match = new Regex (@"finish_gray_stack_end timestamp \d+ generation \d+") },
@@ -78,11 +67,16 @@ public class GCEvent {
 		public GCEventTimestampType timestampType;
 		private Regex match;
 
-		public static GCEventTypeMatcher Match (string line)
+		public static GCEventTypeMatcher Match (string line, out string[] groups)
 		{
+			groups = null;
 			foreach (GCEventTypeMatcher matcher in matchers) {
-				if (matcher.match.IsMatch (line))
+				if (matcher.match.IsMatch (line)) {
+					Match m = matcher.match.Match (line);
+					if (m.Groups.Count > 1)
+						groups = m.Groups.Cast<Group> ().Skip (1).Select<Group,string> (g => g.Value).ToArray<string> ();
 					return matcher;
+				}
 			}
 
 			return null;
@@ -110,13 +104,15 @@ public class GCEvent {
 
 	public double Timestamp { get; private set; }
 	public GCEventType Type { get; private set; }
-	public int WorkerIndex {get; private set; }
+	public int WorkerIndex { get; private set; }
+	public string[] Values { get; private set; }
 
 	private static GCEvent Parse (string line, Stack<GCEvent> noTimestamp, ref double timestamp)
 	{
 		double stamp = GCEventTypeMatcher.MatchTimestamp (line);
 		int worker_index = GCEventTypeMatcher.MatchWorkerIndex (line);
-		GCEventTypeMatcher eventTypeMatch = GCEventTypeMatcher.Match (line);
+		string[] groups;
+		GCEventTypeMatcher eventTypeMatch = GCEventTypeMatcher.Match (line, out groups);
 		GCEvent gcEvent = null;
 
 		if (stamp != default(double) && noTimestamp.Count > 0) {
@@ -129,6 +125,7 @@ public class GCEvent {
 			gcEvent = new GCEvent ();
 			gcEvent.Type = eventTypeMatch.type;
 			gcEvent.WorkerIndex = worker_index;
+			gcEvent.Values = groups;
 			switch (eventTypeMatch.timestampType) {
 				case GCEventTimestampType.BEFORE:
 					Utils.Assert (timestamp != default(double));
