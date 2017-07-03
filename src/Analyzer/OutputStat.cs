@@ -98,6 +98,9 @@ public class OutputStat {
 		Utils.AssertEqual<int> ((int)o1.cumulation_type, (int)o2.cumulation_type, o1, o2);
 		o_result.cumulation_type = o1.cumulation_type;
 
+		Utils.AssertEqual<bool> (o1.stat_hidden, o2.stat_hidden, o1, o2);
+		o_result.stat_hidden = o1.stat_hidden;
+
 		switch (o_result.cumulation_type) {
 			case CumulationType.MIN_MAX_AVG:
 				o_result.min_val = Math.Min (o1.min_val, o2.min_val);
