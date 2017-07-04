@@ -25,9 +25,9 @@ class WorkerInfoNursery {
 
 	public OutputStatSet AddFinishStats (OutputStatSet stats)
 	{
-		stats |= new OutputStat (string.Format ("Major Scan {0,2} (ms)", worker_index), total_major_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("LOS Scan {0,2} (ms)", worker_index), total_los_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("Finish Par {0,2} (ms)", worker_index), (total_work_time - total_major_scan - total_los_scan) * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Major Scan {0,2} (ms)", worker_index), total_major_scan * 1000, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat (string.Format ("LOS Scan {0,2} (ms)", worker_index), total_los_scan * 1000, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat (string.Format ("Finish {0,2} (ms)", worker_index), (total_work_time - total_major_scan - total_los_scan) * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 
@@ -80,8 +80,8 @@ public class NurseryCollection : GCCollection {
 		stats |= new OutputStat ("Resume World (ms)", (resume_end - resume_start) * 1000, CumulationType.MIN_MAX_AVG);
 		stats ^= new OutputStat ("Nursery Pause (ms)", (end_timestamp - start_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		stats = worker_manager.AddFinishStats (stats);
-		stats |= new OutputStat ("Major Scan (ms)", major_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat ("LOS Scan (ms)", los_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Major Scan (ms)", major_scan * 1000, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat ("LOS Scan (ms)", los_scan * 1000, CumulationType.MIN_MAX_AVG, true);
 		stats |= new OutputStat ("Minor Finish GS (ms)", finish_gray_stack * 1000, CumulationType.MIN_MAX_AVG);
 		return stats | base.GetStats ();
 	}

@@ -105,7 +105,8 @@ public class RunInfoDatabase {
 				stat1 = s1 [i];
 			if (s2 != null && i < s2.Count)
 				stat2 = s2 [i];
-			statsWriter.WriteLine (OutputStatSet.ToString (stat1, stat2, false));
+			statsWriter.Write (OutputStatSet.ToString (stat1, stat2, false));
+			statsWriter.WriteLine ("--------------------------------------------------------------------------------------------------------------------");
 		}
 	}
 
@@ -115,12 +116,12 @@ public class RunInfoDatabase {
 		for (int i = 0; i < runs1.Count; i++) {
 			string statsFile = Path.Combine (resultsFolder, "majors" + i);
 			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
-				statsWriter.WriteLine ("Majors");
+				statsWriter.WriteLine ("Majors\n");
 				OutputStatListComparison (statsWriter, runs1 [i].GetTopMajorStats (10), only1 ? null : runs2 [i].GetTopMajorStats (10));
 			}
 			statsFile = Path.Combine (resultsFolder, "minors" + i);
 			using (StreamWriter statsWriter = new StreamWriter (statsFile)) {
-				statsWriter.WriteLine ("Minors");
+				statsWriter.WriteLine ("Minors\n");
 				OutputStatListComparison (statsWriter, runs1 [i].GetTopMinorStats (10), only1 ? null : runs2 [i].GetTopMinorStats (10));
 			}
 		}

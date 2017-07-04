@@ -74,9 +74,9 @@ class WorkerInfo {
 		if (last_concurrent_index == -1)
 			return stats;
 
-		stats |= new OutputStat (string.Format ("Conc M&S {0,2} (ms)", worker_index), finish_stats [0].work_time * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("Major Mod Preclean {0,2} (ms)", worker_index), finish_stats [last_concurrent_index].major_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("LOS Mod Preclean {0,2} (ms)", worker_index), finish_stats [last_concurrent_index].los_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Conc M&S {0,2} (ms)", worker_index), finish_stats [0].work_time * 1000, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat (string.Format ("Major Mod Preclean {0,2} (ms)", worker_index), finish_stats [last_concurrent_index].major_scan * 1000, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat (string.Format ("LOS Mod Preclean {0,2} (ms)", worker_index), finish_stats [last_concurrent_index].los_scan * 1000, CumulationType.MIN_MAX_AVG, true);
 		stats |= new OutputStat (string.Format ("Finish conc M&S {0,2} (ms)", worker_index), (finish_stats [last_concurrent_index].DrainWork - finish_stats [0].work_time) * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
@@ -89,9 +89,9 @@ class WorkerInfo {
 		if (last_concurrent_index == finish_stats.Count - 1)
 			return stats;
 
-		stats |= new OutputStat (string.Format ("Mod Union Major Scan {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].major_scan * 1000, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("Mod Union LOS Scan {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].los_scan, CumulationType.MIN_MAX_AVG);
-		stats |= new OutputStat (string.Format ("Major Finish Par {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].DrainWork * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat (string.Format ("Mod Union Major Scan {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].major_scan * 1000, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat (string.Format ("Mod Union LOS Scan {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].los_scan, CumulationType.MIN_MAX_AVG, true);
+		stats |= new OutputStat (string.Format ("Major Finish {0,2} (ms)", worker_index), finish_stats [finish_stats.Count - 1].DrainWork * 1000, CumulationType.MIN_MAX_AVG);
 		return stats;
 	}
 
@@ -168,8 +168,8 @@ public class MajorConcCollection : GCCollection {
 		stats ^= new OutputStat ("Major Pause (ms)", (end_timestamp - start_of_end_timestamp) * 1000, CumulationType.MIN_MAX_AVG);
 		stats |= new OutputStat ("Forced Finish", worker_manager.NumForced, CumulationType.MIN_MAX_AVG);
 		stats = worker_manager.AddFinishStats (stats, start_of_end_timestamp);
-		stats |= new OutputStat ("Mod Union Major Scan (ms)", major_scan * 1000, CumulationType.MIN_MAX_AVG);
-                stats |= new OutputStat ("Mod Union LOS Scan (ms)", los_scan * 1000, CumulationType.MIN_MAX_AVG);
+		stats |= new OutputStat ("Mod Union Major Scan (ms)", major_scan * 1000, CumulationType.MIN_MAX_AVG, true);
+                stats |= new OutputStat ("Mod Union LOS Scan (ms)", los_scan * 1000, CumulationType.MIN_MAX_AVG, true);
 		stats |= new OutputStat ("Major Finish GS (ms)", finish_gray_stack * 1000, CumulationType.MIN_MAX_AVG);
 		if (concurrent_sweep_end > end_timestamp) {
 			if (next_nursery_start != default(double) && concurrent_sweep_end > next_nursery_start) {
