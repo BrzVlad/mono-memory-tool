@@ -137,17 +137,18 @@ public class OutputStatSet : IComparable<OutputStatSet> {
 		if (s1.Count == 0) {
 			stat_result.stats = new List<OutputStat> (s2.stats); 
 		} else {
-			/* FIXME Figure out a way to combine par + nopar stat sets */
-			if (s1.Count != s2.Count)
-				return s1;
-
+			/* We combine the shared stats */
 			for (int i = 0; i < s1.Count; i++) {
-				OutputStat sum_stat = s1 [i] + s2 [i];
-				if (s1.sort_stat == s1 [i]) {
-					Utils.AssertEqualRef (s2.sort_stat, s2 [i], s1, s2);
-					stat_result.sort_stat = sum_stat;
+				int index2 = s2.FindStatIndex (s1 [i]);
+
+				if (index2 != -1) {
+					OutputStat sum_stat = s1 [i] + s2 [index2];
+					if (s1.sort_stat == s1 [i]) {
+						Utils.AssertEqualRef (s2.sort_stat, s2 [index2], s1, s2);
+						stat_result.sort_stat = sum_stat;
+					}
+					stat_result.stats.Add (sum_stat);
 				}
-				stat_result.stats.Add (sum_stat);
 			}
 		}
 
