@@ -101,12 +101,16 @@ class WorkerStatManager {
 	private const int MAX_NUM_WORKERS = 16;
 	private WorkerInfo[] worker_infos = new WorkerInfo [MAX_NUM_WORKERS];
 
-	public void HandleEvent (GCEvent gcEvent, double start_timestamp_finish) {
+	public void HandleEvent (GCEvent gcEvent, double start_timestamp_finish)
+	{
+		Utils.Assert (gcEvent.Type == GCEventType.MAJOR_WORKER_FINISH_STATS
+			|| gcEvent.Type == GCEventType.MAJOR_WORKER_FINISH_FORCED_STATS);
 
-		if (worker_infos [gcEvent.WorkerIndex] == null)
-			worker_infos [gcEvent.WorkerIndex] = new WorkerInfo (gcEvent.WorkerIndex);
+		int worker_index = int.Parse (gcEvent.Values [0]);
+		if (worker_infos [worker_index] == null)
+			worker_infos [worker_index] = new WorkerInfo (worker_index);
 
-		worker_infos [gcEvent.WorkerIndex].HandleEvent (gcEvent);
+		worker_infos [worker_index].HandleEvent (gcEvent);
 	}
 
 	public int NumForced {
