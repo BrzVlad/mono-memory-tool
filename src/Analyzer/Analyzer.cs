@@ -18,6 +18,7 @@ public class Program {
 	public static MajorType major1, major2;
 	public static string mono1, mono2;
 	public static string workingDirectory;
+	public static string benchmark_name;
 	public static string[] monoArguments;
 
 	private static RunInfoDatabase runInfoDatabase = new RunInfoDatabase (remove_outliers);
@@ -104,7 +105,11 @@ public class Program {
 			target = exec1;
 		}
 
-		resultsFolder = Path.Combine ("results", target);
+		benchmark_name = Environment.GetEnvironmentVariable ("BENCHMARK_NAME");
+		if (benchmark_name == null)
+			benchmark_name = target;
+
+		resultsFolder = Path.Combine ("results", benchmark_name);
 		Directory.CreateDirectory (resultsFolder);
 
 		for (int i = 0; i < numRuns; i++) {

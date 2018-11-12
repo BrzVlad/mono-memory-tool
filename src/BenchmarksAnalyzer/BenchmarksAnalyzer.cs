@@ -31,6 +31,7 @@ public class Program {
 				UseShellExecute = false,
 			};
 
+			info.EnvironmentVariables ["BENCHMARK_NAME"] = b.Name;
 			info.FileName = analyzer;
 			info.Arguments = mode + " " + mono1 + " " + mono2 + " " + Path.Combine (tests_folder, b.TestDirectory) + " " + string.Join (" ", b.CommandLine);
 
