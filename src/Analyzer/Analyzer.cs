@@ -16,6 +16,7 @@ public class Program {
 	public const int deltaHack = 4;
 
 	public static MajorType major1, major2;
+	public static bool interp1, interp2;
 	public static string mono1, mono2;
 	public static string workingDirectory;
 	public static string benchmark_name;
@@ -26,18 +27,18 @@ public class Program {
 	public static void PrintUsage ()
 	{
 		Console.WriteLine ("Usage : ./analyzer.exe mode mono1 mono2 working-directory [mono-arg1] [mono-arg2] ...");
-		Console.WriteLine ("		mode	: majors for the two monos [s|c|cp]v[s|c|cp]");
+		Console.WriteLine ("		mode	: majors for the two monos [s|c|cp][i]v[s|c|cp][i]");
 		Console.WriteLine ("		mono2	: if mono2 is '-' then mono1 is used for both runs");
 	}
 
-	public static bool ParseMajor (string major, ref MajorType major_type)
+	public static bool ParseMajor (string mode, ref MajorType major_type)
 	{
-		if (string.Compare (major, "s") == 0)
-			major_type = MajorType.MajorSerial;
-		else if (string.Compare (major, "c") == 0)
-			major_type = MajorType.MajorConcurrent;
-		else if (string.Compare (major, "cp") == 0)
+		if (mode.Contains ("cp"))
 			major_type = MajorType.MajorConcurrentPar;
+		else if (mode.Contains ("c"))
+			major_type = MajorType.MajorConcurrent;
+		else if (mode.Contains ("s"))
+			major_type = MajorType.MajorSerial;
 		else
 			return false;
 		return true;
@@ -45,13 +46,15 @@ public class Program {
 
 	public static bool ParseMode (string mode)
 	{
-		string[] majors = mode.Split ('v');
-		if (majors.Length != 2)
+		string[] modes = mode.Split ('v');
+		if (modes.Length != 2)
 			return false;
-		if (!ParseMajor (majors [0], ref major1))
+		if (!ParseMajor (modes [0], ref major1))
 			return false;
-		if (!ParseMajor (majors [1], ref major2))
+		if (!ParseMajor (modes [1], ref major2))
 			return false;
+		interp1 = modes [0].Contains ("i");
+		interp2 = modes [1].Contains ("i");
 		return true;
 	}
 
@@ -85,8 +88,8 @@ public class Program {
 		string exec1 = Path.GetFileNameWithoutExtension (mono1);
 		string exec2 = Path.GetFileNameWithoutExtension (mono2);
 
-		string name1 = exec1 + "|" + major1;
-		string name2 = exec2 + "|" + major2;
+		string name1 = exec1 + "|" + major1 + (interp1 ? "|i" : "");
+		string name2 = exec2 + "|" + major2 + (interp2 ? "|i" : "");
 
 		bool no_comparison = name1 == name2;
 
@@ -115,12 +118,12 @@ public class Program {
 		for (int i = 0; i < numRuns; i++) {
 			List<double>[] memoryUsage;
 
-			memoryUsage = RunMono (mono1, monoArguments, workingDirectory, major1);
+			memoryUsage = RunMono (mono1, monoArguments, workingDirectory, major1, interp1);
 			runInfoDatabase.runs1.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
 			File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name1 + i), true);
 
 			if (!no_comparison) {
-				memoryUsage = RunMono (mono2, monoArguments, workingDirectory, major2);
+				memoryUsage = RunMono (mono2, monoArguments, workingDirectory, major2, interp2);
 				runInfoDatabase.runs2.Add (new RunInfo (memoryUsage [0], memoryUsage [1], ParseBinProtOutput ()));
 				File.Copy (binprotFile, Path.Combine (resultsFolder, "binprot-" + name2 + i), true);
 			}
@@ -140,13 +143,13 @@ public class Program {
 		Console.WriteLine ("Environment [{0}] = {1}", key, p.StartInfo.EnvironmentVariables [key]);
 	}
 
-	public static List<double>[] RunMono (string mono, string[] args, string workingDirectory, MajorType major_type)
+	public static List<double>[] RunMono (string mono, string[] args, string workingDirectory, MajorType major_type, bool interpreted)
 	{
 		Process p = new Process ();
 		p.StartInfo.UseShellExecute = false;
 		p.StartInfo.FileName = mono;
 		p.StartInfo.WorkingDirectory = workingDirectory;
-		p.StartInfo.Arguments = string.Join (" ", args.Select<string, string> (arg => "\"" + arg + "\""));
+		p.StartInfo.Arguments = (interpreted ? "\"--interpreter\" " : "") + string.Join (" ", args.Select<string, string> (arg => "\"" + arg + "\""));
 
 		switch (major_type) {
 			case MajorType.MajorSerial:
@@ -161,7 +164,7 @@ public class Program {
 		}
 		AddMonoOption (p, "MONO_GC_DEBUG", "binary-protocol=" + binprotFile);
 
-		Console.WriteLine ("Run {0}, Major Type {1}", mono, major_type);
+		Console.WriteLine ("Run {0}, Major Type {1}, Interpreted = {2}", mono, major_type, interpreted);
 		Thread.Sleep (1000);
 		p.Start ();
 

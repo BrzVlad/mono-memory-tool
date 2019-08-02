@@ -10,7 +10,7 @@ public class Program {
 	{
 		if (args.Length < 4) {
 			Console.WriteLine ("Usage : ./benchmarks-analyzer.exe mode mono1 mono2 benchmarker-folder");
-			Console.WriteLine ("            mode    : majors for the two monos [s|c|cp]v[s|c|cp]");
+			Console.WriteLine ("            mode    : majors for the two monos [s|c|cp][i]v[s|c|cp][i]");
 			Console.WriteLine ("            mono2   : if mono2 is '-' then mono1 is used for both runs");
 			return;
 		}
