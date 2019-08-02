@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
+using System.Text;
 
 using Benchmarker.Common.Models;
 
@@ -39,5 +41,52 @@ public class Program {
 			Process ps = Process.Start (info);
 			ps.WaitForExit ();
 		}
+
+		Report (benchmark_list);
+	}
+
+	private static float GetMedian (List<float> floats)
+	{
+		int length = floats.Count;
+		floats.Sort ();
+		if (length % 2 == 0) {
+			return (floats [length / 2 - 1] + floats [length / 2]) / 2;
+		} else {
+			return floats [length / 2];
+		}
+	}
+
+	private static void Report (List<Benchmark> benchmark_list)
+	{
+		StringBuilder report_text = new StringBuilder ();
+		List<float> ratios = new List<float> ();
+		foreach (Benchmark b in benchmark_list) {
+			string stats_file = Path.Combine ("results", b.Name, "stats-overall");
+			string line = null;
+			using (StreamReader file_reader = File.OpenText (stats_file)) {
+				do {
+					line = file_reader.ReadLine ();
+					if (line == null)
+						break;
+				} while (!line.Contains ("Time (s)"));
+			}
+			// No data for this benchmark for whatever reason
+			if (line == null)
+				continue;
+			line = line.Replace ("Time (s)", "");
+			line = line.Trim (' ');
+			line = Regex.Replace (line, " {2,}", " ");
+			string[] times = line.Split (' ');
+			if (times.Length != 2)
+				continue;
+			float time1 = float.Parse (times [0]);
+			float time2 = float.Parse (times [1]);
+
+			ratios.Add (time1 / time2);
+			report_text.AppendLine (string.Format ("{0}\t{1:0.00}\t{2:0.00}\t{3:0.00}", b.Name, time1, time2, time1 / time2));
+		}
+		string report_file = Path.Combine ("results", "report.txt");
+		File.WriteAllText (report_file, report_text.ToString ());
+		File.AppendAllText (report_file, string.Format ("Median\t{0:0.00}\n", GetMedian (ratios)));
 	}
 }

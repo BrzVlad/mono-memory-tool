@@ -52,6 +52,7 @@ namespace Benchmarker.Common.Models
 			}
 			return allPaths
 				.Select (f => Benchmark.LoadFrom (f))
+				.OrderBy (b => b.Name)
 				.ToList ();
 		}
 
